@@ -127,10 +127,12 @@ def init_db():
             cur.executemany(
                 _adapt("INSERT INTO classes (name) VALUES (?)"),
                 [
-                    ("2AS رياضيات",),
+                    ("2AS maths",),
                     ("3AS PC",),
-                    ("3AS SNV",),
-                    ("1AS",),
+                    ("4AS PC",),
+                    ("5D maths",),
+                    ("5A maths",),
+                    ("6A maths",),
                 ],
             )
             db.commit()
