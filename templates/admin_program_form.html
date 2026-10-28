@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{% if exercise %}Edit Exercise{% else %}Add Exercise{% endif %}{% endblock %}
+
+{% block content %}
+<h2>{% if exercise %}Edit Exercise{% else %}Add Exercise{% endif %}</h2>
+<div class="card">
+    <form method="POST">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" value="{{ exercise.title if exercise else '' }}" required>
+
+        <label for="question">Question</label>
+        <input type="text" id="question" name="question" value="{{ exercise.question if exercise else '' }}" required>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+            <div style="flex:1; min-width:140px;">
+                <label>Option A</label>
+                <input type="text" name="option_a" value="{{ exercise.option_a if exercise else '' }}">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label>Option B</label>
+                <input type="text" name="option_b" value="{{ exercise.option_b if exercise else '' }}">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label>Option C</label>
+                <input type="text" name="option_c" value="{{ exercise.option_c if exercise else '' }}">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label>Option D</label>
+                <input type="text" name="option_d" value="{{ exercise.option_d if exercise else '' }}">
+            </div>
+        </div>
+
+        <label>Correct answer</label>
+        <div class="field-group">
+            <label><input type="radio" name="correct_answer" value="A" {% if exercise and exercise.correct_answer=='A' %}checked{% endif %}> A</label>
+        </div>
+        <div class="field-group">
+            <label><input type="radio" name="correct_answer" value="B" {% if exercise and exercise.correct_answer=='B' %}checked{% endif %}> B</label>
+        </div>
+        <div class="field-group">
+            <label><input type="radio" name="correct_answer" value="C" {% if exercise and exercise.correct_answer=='C' %}checked{% endif %}> C</label>
+        </div>
+        <div class="field-group">
+            <label><input type="radio" name="correct_answer" value="D" {% if exercise and exercise.correct_answer=='D' %}checked{% endif %}> D</label>
+        </div>
+
+        <label for="class_id">Class</label>
+        <select id="class_id" name="class_id" required>
+            <option value="">Select a class</option>
+            {% for c in classes %}
+                <option value="{{ c.id }}" {% if (exercise and exercise.class_id==c.id) or (not exercise and class_id|string == c.id|string) %}selected{% endif %}>
+                    {{ c.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        {% if exercise %}
+            <a href="{{ url_for('admin_programs') }}" class="btn ghost">Cancel</a>
+            <button type="submit" class="btn primary">Update Exercise</button>
+        {% else %}
+            <a href="{{ url_for('admin_programs') }}" class="btn ghost">Cancel</a>
+            <button type="submit" class="btn primary">Add Exercise</button>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

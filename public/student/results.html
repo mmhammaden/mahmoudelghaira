@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نتائجتي - Ghaira</title>
+<link rel="stylesheet" href="../js/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/dashboard.html" class="brand">Ghaira</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="container">
+  <div id="alert-box"></div>
+  <h2>نتائجتي</h2>
+  <table id="resultsTable">
+    <thead><tr><th>التمرين</th><th>النتيجة</th><th>تاريخ الإرسال</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+let profile;
+async function init() {
+  profile = await requireAuth();
+  if (!profile) return;
+  await buildNavbar();
+  await loadالنتائج();
+}
+
+async function loadالنتائج() {
+  const { data, error } = await supabase
+    .from('results')
+    .select('*, exercises ( title )')
+    .eq('user_id', profile.id)
+    .order('submitted_at', { ascending: false });
+  if (error) { showAlert(error.message, 'error'); return; }
+
+  const tbody = document.querySelector('#resultsTable tbody');
+  if ((data || []).length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="small-note">لا توجد نتائج بعد.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = (data || []).map(r => `
+    <tr>
+      <td>${escapeHtml(r.exercises?.title) || 'التمرين #' + escapeHtml(r.exercise_id)}</td>
+      <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
+      <td>${escapeHtml(formatDate(r.submitted_at))}</td>
+    </tr>
+  `).join('');
+}
+
+init();
+</script>
+</body>
+</html>

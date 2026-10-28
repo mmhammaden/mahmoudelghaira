@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Take التمرين - Ghaira</title>
+<link rel="stylesheet" href="../js/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/dashboard.html" class="brand">Ghaira</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="container">
+  <div id="alert-box"></div>
+  <h2 id="exالعنوان"></h2>
+  <div class="card">
+    <form id="answerForm">
+      <p id="exالسؤال"></p>
+      <div class="field-group">
+        <label><input type="radio" name="answer" value="A" required> <span id="optA"></span></label>
+      </div>
+      <div class="field-group">
+        <label><input type="radio" name="answer" value="B"> <span id="optB"></span></label>
+      </div>
+      <div class="field-group">
+        <label><input type="radio" name="answer" value="C"> <span id="optC"></span></label>
+      </div>
+      <div class="field-group">
+        <label><input type="radio" name="answer" value="D"> <span id="optD"></span></label>
+      </div>
+      <button type="submit" class="btn btn-primary">إرسال الإجابة</button>
+      <a href="/student/exercises.html" class="btn btn-ghost">إلغاء</a>
+    </form>
+  </div>
+</div>
+
+<script>
+let profile, exerciseId = null;
+const urlParams = new URLSearchParams(window.location.search);
+exerciseId = urlParams.get('id');
+
+async function init() {
+  profile = await requireAuth();
+  if (!profile) return;
+  await buildNavbar();
+  await loadالتمرين();
+}
+
+async function loadالتمرين() {
+  const { data, error } = await supabase
+    .from('exercises')
+    .select(`*, classes ( name )`)
+    .eq('id', parseInt(exerciseId))
+    .eq('class_id', profile.class_id)
+    .single();
+  if (error || !data) {
+    document.getElementById('alert-box').innerHTML = '<div class="alert alert-error">التمرين not found or not available for your class.</div>';
+    return;
+  }
+  document.getElementById('exالعنوان').textContent = data.title;
+  document.getElementById('exالسؤال').textContent = data.question;
+  document.getElementById('optA').textContent = data.option_a;
+  document.getElementById('optB').textContent = data.option_b;
+  document.getElementById('optC').textContent = data.option_c;
+  document.getElementById('optD').textContent = data.option_d;
+  window.exerciseData = data;
+}
+
+document.getElementById('answerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const box = document.getElementById('alert-box');
+  const answer = document.querySelector('input[name="answer"]:checked').value;
+  const data = window.exerciseData;
+  const correct = answer === data.correct_answer ? 1 : 0;
+
+  const { error } = await supabase.from('results').insert({
+    user_id: profile.id,
+    exercise_id: data.id,
+    score: correct,
+    total: 1
+  });
+
+  if (error) { box.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>'; return; }
+  box.innerHTML = '<div class="alert alert-success">تم حفظ النتيجة! إجابتك ' + (correct ? 'صحيحة.' : 'inصحيحة.') + '</div>';
+  setTimeout(() => { window.location.href = '/student/exercises.html'; }, 1500);
+});
+
+init();
+</script>
+</body>
+</html>

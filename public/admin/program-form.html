@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نموذج تمرين - Ghaira</title>
+<link rel="stylesheet" href="../js/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+</head>
+<body>
+<nav class="navbar">
+  <a href="dashboard.html" class="brand">Ghaira</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="container">
+  <div id="alert-box"></div>
+  <h2 id="pageالعنوان">إضافة تمرين</h2>
+  <div class="card">
+    <form id="form">
+      <label for="title">العنوان</label>
+      <input type="text" id="title" name="title" required>
+
+      <label for="question">السؤال</label>
+      <input type="text" id="question" name="question" required>
+
+      <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+        <div style="flex:1; min-width:140px;">
+          <label>Option A</label>
+          <input type="text" name="option_a">
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label>Option B</label>
+          <input type="text" name="option_b">
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label>Option C</label>
+          <input type="text" name="option_c">
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label>Option D</label>
+          <input type="text" name="option_d">
+        </div>
+      </div>
+
+      <label>الإجابة الصحيحة answer</label>
+      <div style="margin-bottom:1rem;">
+        <label style="font-weight:normal;"><input type="radio" name="correct_answer" value="A"> A</label>
+        <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="B"> B</label>
+        <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="C"> C</label>
+        <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="D"> D</label>
+      </div>
+
+      <label for="class_id">الصف</label>
+      <select id="class_id" name="class_id" required>
+        <option value="">اختر صفاً</option>
+      </select>
+
+      <a href="/admin/programs.html" class="btn btn-ghost">إلغاء</a>
+      <button type="submit" class="btn btn-primary" id="submitBtn">إضافة تمرين</button>
+    </form>
+  </div>
+</div>
+
+<script>
+let profile, editId = null;
+const classSelect = document.getElementById('class_id');
+const form = document.getElementById('form');
+const submitBtn = document.getElementById('submitBtn');
+const pageالعنوان = document.getElementById('pageالعنوان');
+const urlParams = new URLSearchParams(window.location.search);
+editId = urlParams.get('id');
+
+async function init() {
+  profile = await requireAuth(true);
+  if (!profile) return;
+  await buildNavbar();
+  await loadالصفes();
+  if (editId) {
+    pageالعنوان.textContent = 'تعديل تمرين';
+    submitBtn.textContent = 'تحديث تمرين';
+    await loadالتمرين(editId);
+  }
+}
+
+async function loadالصفes() {
+  const { data } = await supabase.from('classes').select('*').order('name');
+  classSelect.innerHTML = '<option value="">اختر صفاً</option>' +
+    (data || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
+}
+
+async function loadالتمرين(id) {
+  const { data } = await supabase.from('exercises').select('*').eq('id', id).single();
+  if (!data) return;
+  document.getElementById('title').value = data.title;
+  document.getElementById('question').value = data.question;
+  form.elements['option_a'].value = data.option_a || '';
+  form.elements['option_b'].value = data.option_b || '';
+  form.elements['option_c'].value = data.option_c || '';
+  form.elements['option_d'].value = data.option_d || '';
+  form.elements['correct_answer'].value = data.correct_answer;
+  classSelect.value = data.class_id;
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const box = document.getElementById('alert-box');
+  const payload = {
+    title: document.getElementById('title').value,
+    question: document.getElementById('question').value,
+    option_a: form.elements['option_a'].value,
+    option_b: form.elements['option_b'].value,
+    option_c: form.elements['option_c'].value,
+    option_d: form.elements['option_d'].value,
+    correct_answer: form.elements['correct_answer'].value,
+    class_id: parseInt(classSelect.value)
+  };
+
+  if (editId) {
+    const { error } = await supabase.from('exercises').update(payload).eq('id', editId);
+    if (error) { box.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>'; return; }
+  } else {
+    const { error } = await supabase.from('exercises').insert(payload);
+    if (error) { box.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>'; return; }
+  }
+  window.location.href = 'programs.html';
+});
+
+init();
+</script>
+</body>
+</html>

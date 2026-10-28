@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}My Results{% endblock %}
+
+{% block content %}
+<h2>My Results</h2>
+<p class="small-note">Your saved exercise results. The admin can view these by student and by class.</p>
+
+{% if results %}
+    <table>
+        <thead>
+            <tr>
+                <th>Exercise</th><th>Score</th><th>Submitted</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in results %}
+            <tr>
+                <td>{{ r.exercise_title }}</td>
+                <td>{{ r.score }} / {{ r.total }}</td>
+                <td>{{ r.submitted_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p class="small-note">No results yet. Start doing exercises!</p>
+{% endif %}
+{% endblock %}

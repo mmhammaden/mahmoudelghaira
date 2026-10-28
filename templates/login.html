@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Login</h2>
+    <form method="POST">
+        <label for="phone">Phone number</label>
+        <input type="text" id="phone" name="phone" placeholder="رقم الهاتف" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit" class="btn primary">Login</button>
+    </form>
+    <p class="small-note">ليس لديك حساب؟ <a href="{{ url_for('register') }}">سجل هنا</a> &mdash; no verification required.</p>
+</div>
+{% endblock %}

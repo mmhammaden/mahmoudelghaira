@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ghaira{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="topbar">
+        <a href="{{ url_for('dashboard') }}" class="brand">Ghaira</a>
+        <div class="nav-links">
+            {% if session.user_id %}
+                {% if session.role == 'admin' %}
+                    <a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if request.endpoint=='admin_dashboard' else '' }}">Admin</a>
+                    <a href="{{ url_for('admin_programs') }}" class="{{ 'active' if request.endpoint in ('admin_programs','admin_program_add','admin_program_edit') else '' }}">Programs</a>
+                    <a href="{{ url_for('admin_users') }}" class="{{ 'active' if request.endpoint=='admin_users' else '' }}">Users</a>
+                    <a href="{{ url_for('admin_results') }}" class="{{ 'active' if request.endpoint=='admin_results' else '' }}">Results</a>
+                {% else %}
+                    <a href="{{ url_for('student_exercises') }}" class="{{ 'active' if request.endpoint in ('student_exercises','student_take_exercise') else '' }}">Exercises</a>
+                    <a href="{{ url_for('student_results') }}" class="{{ 'active' if request.endpoint=='student_results' else '' }}">My Results</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" style="color:#fca5a5;">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashes">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="footer">
+        Ghaira &mdash; classes, exercises and results.
+    </footer>
+</body>
+</html>

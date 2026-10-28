@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المستخدمون - Ghaira</title>
+<link rel="stylesheet" href="../js/common.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+</head>
+<body>
+<nav class="navbar">
+  <a href="dashboard.html" class="brand">Ghaira</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<div class="container">
+  <div id="alert-box"></div>
+  <h2>المستخدمون Management</h2>
+  <table id="usersTable">
+    <thead><tr><th>الاسم</th><th>الهاتف</th><th>الدور</th><th>الصف</th><th>الإجراءات</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+let profile;
+async function init() {
+  profile = await requireAuth(true);
+  if (!profile) return;
+  await buildNavbar();
+  await loadالمستخدمون();
+}
+
+async function loadالمستخدمون() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*, classes ( name )')
+    .order('role', { ascending: false })
+    .order('name');
+  if (error) { showAlert(error.message, 'error'); return; }
+
+  const tbody = document.querySelector('#usersTable tbody');
+  tbody.innerHTML = (data || []).map(u => `
+    <tr>
+      <td data-user-id="${u.id}">${escapeHtml(u.name)}</td>
+      <td>${escapeHtml(u.phone)}</td>
+      <td>
+        <select onchange="changeالدور('${u.id}', this.value)">
+          <option value="student" ${u.role === 'student' ? 'selected' : ''}>الطالب</option>
+          <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>الإدارة</option>
+        </select>
+      </td>
+      <td>
+        <select onchange="changeالصف('${u.id}', this.value)" data-class-id="${u.class_id ?? ''}">
+          <option value="">None</option>
+        </select>
+      </td>
+      <td>
+        ${u.role === 'admin' ? '<span class="small-note">protected</span>' :
+          '<button class="btn btn-small btn-danger" onclick="deleteUser(\'' + escapeHtml(u.id) + '\')">حذف</button>'}
+      </td>
+    </tr>
+  `).join('');
+
+  // Load classes for each user's class dropdown and preselect the current class
+  const { data: classes } = await supabase.from('classes').select('*').order('name');
+  document.querySelectorAll('select[onchange^="changeالصف"]').forEach(select => {
+    const currentClassId = select.dataset.classId;
+    select.innerHTML = '<option value="">None</option>' +
+      (classes || []).map(c =>
+        '<option value="' + c.id + '" ' + (c.id == currentClassId ? 'selected' : '') + '>' + c.name + '</option>'
+      ).join('');
+  });
+}
+
+async function changeالدور(userId, role) {
+  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
+  if (error) alert(error.message);
+}
+
+async function changeالصف(userId, classId) {
+  await supabase.from('profiles').update({ class_id: classId ? parseInt(classId) : null }).eq('id', userId);
+}
+
+async function deleteUser(userId) {
+  if (!confirm('حذف User?')) return;
+  await supabase.from('results').delete().eq('user_id', userId);
+  await supabase.from('profiles').delete().eq('id', userId);
+  // Delete the Supabase Auth account too. This requires the service role key,
+  // so we delegate to a server-side endpoint rather than the anon key.
+  try {
+    const res = await fetch('/api/admin/users/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+
+      console.error('Failed to delete auth account:', body.error || res.status);
+    }
+  } catch (e) {
+    console.error('Failed to delete auth account:', e);
+  }
+  await loadالمستخدمون();
+}
+
+init();
+</script>
+</body>
+</html>

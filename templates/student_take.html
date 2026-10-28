@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ exercise.title }}{% endblock %}
+
+{% block content %}
+<h2>{{ exercise.title }}</h2>
+<div class="card">
+    <form method="POST">
+        <p>{{ exercise.question }}</p>
+        <div class="field-group">
+            <label><input type="radio" name="answer" value="A" required> {{ exercise.option_a }}</label>
+        </div>
+        <div class="field-group">
+            <label><input type="radio" name="answer" value="B"> {{ exercise.option_b }}</label>
+        </div>
+        <div class="field-group">
+            <label><input type="radio" name="answer" value="C"> {{ exercise.option_c }}</label>
+        </div>
+        <div class="field-group">
+            <label><input type="radio" name="answer" value="D"> {{ exercise.option_d }}</label>
+        </div>
+        <button type="submit" class="btn primary">Submit Answer</button>
+        <a href="{{ url_for('student_exercises') }}" class="btn ghost">Cancel</a>
+    </form>
+</div>
+{% endblock %}

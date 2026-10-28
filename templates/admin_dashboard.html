@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h2>Admin Dashboard</h2>
+
+<div class="stat-row">
+    <div class="stat">
+        <div class="value">{{ stats.students }}</div>
+        <div class="label">Students</div>
+    </div>
+    <div class="stat">
+        <div class="value">{{ stats.classes }}</div>
+        <div class="label">Classes</div>
+    </div>
+    <div class="stat">
+        <div class="value">{{ stats.exercises }}</div>
+        <div class="label">Programs / Exercises</div>
+    </div>
+    <div class="stat">
+        <div class="value">{{ stats.results }}</div>
+        <div class="label">Results saved</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Recent Results</h2>
+    {% if recent %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th><th>Class</th><th>Exercise</th>
+                    <th>Score</th><th>Submitted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in recent %}
+                <tr>
+                    <td>{{ r.student_name }}</td>
+                    <td>{{ r.class_name or '-' }}</td>
+                    <td>{{ r.exercise_title }}</td>
+                    <td>{{ r.score }} / {{ r.total }}</td>
+                    <td>{{ r.submitted_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="small-note">No results yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

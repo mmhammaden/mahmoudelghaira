@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}My Exercises{% endblock %}
+
+{% block content %}
+<h2>Exercises for {{ current_user.class_name or 'your class' }}</h2>
+<p class="small-note">Do the exercises below. Your results are saved automatically and visible to the admin.</p>
+
+{% if exercises %}
+    {% for e in exercises %}
+    <div class="exercise">
+        <h3>{{ e.title }}</h3>
+        <p>{{ e.question }}</p>
+        {% if e.id in done %}
+            <span class="done">&#10003; Completed &mdash; result saved</span>
+            <a href="{{ url_for('student_take_exercise', exercise_id=e.id) }}" class="btn small ghost">Retry</a>
+        {% else %}
+            <a href="{{ url_for('student_take_exercise', exercise_id=e.id) }}" class="btn primary small">Start exercise</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="small-note">No exercises available for your class yet.</p>
+{% endif %}
+{% endblock %}

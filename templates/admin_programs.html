@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Programs{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+    <h2>Programs &amp; Exercises</h2>
+    <a href="{{ url_for('admin_program_add') }}" class="btn primary">+ Add Exercise</a>
+</div>
+
+{% if exercises %}
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th><th>Class</th><th>Correct Answer</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in exercises %}
+            <tr>
+                <td>{{ e.title }}</td>
+                <td>{{ e.class_name }}</td>
+                <td>{{ e.correct_answer }}</td>
+                <td>
+                    <a href="{{ url_for('admin_program_edit', exercise_id=e.id) }}" class="btn small ghost">Edit</a>
+                    <form action="{{ url_for('admin_program_delete', exercise_id=e.id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn small danger" onclick="return confirm('Delete this exercise?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p class="small-note">No exercises yet. Add one above.</p>
+{% endif %}
+{% endblock %}

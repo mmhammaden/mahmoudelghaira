@@ -1,0 +1,9 @@
+{
+  "hosting": {
+    "public": "public",
+    "target": "exercice7",
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ]
+  }
+}

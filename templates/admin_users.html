@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Users Management{% endblock %}
+
+{% block content %}
+<h2>Users Management</h2>
+<p class="small-note">Anyone can register without verification. Admins can change roles and classes here.</p>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th><th>Phone</th><th>Role</th><th>Class</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.name }}</td>
+                <td>{{ u.phone }}</td>
+                <td>
+                    <form action="{{ url_for('admin_user_role', user_id=u.id) }}" method="POST" style="display:inline;">
+                        <select name="role" onchange="this.form.submit()">
+                            <option value="student" {% if u.role=='student' %}selected{% endif %}>Student</option>
+                            <option value="admin" {% if u.role=='admin' %}selected{% endif %}>Admin</option>
+                        </select>
+                    </form>
+                </td>
+                <td>
+                    <form action="{{ url_for('admin_user_class', user_id=u.id) }}" method="POST" style="display:inline;">
+                        <select name="class_id" onchange="this.form.submit()">
+                            <option value="">None</option>
+                            {% for c in classes %}
+                                <option value="{{ c.id }}" {% if u.class_id==c.id %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </td>
+                <td>
+                    {% if u.role == 'admin' %}
+                        <span class="small-note">protected</span>
+                    {% else %}
+                        <form action="{{ url_for('admin_user_delete', user_id=u.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn small danger" onclick="return confirm('Delete this user?')">Delete</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if not users %}
+        <p class="small-note">No users.</p>
+    {% endif %}
+</div>
+{% endblock %}
