@@ -3,73 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نموذج تمرين - Ghaira</title>
+<title>نموذج تمرين – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
 </head>
 <body>
 <nav class="navbar">
-  <a href="dashboard.html" class="brand">Ghaira</a>
+  <a href="../index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links" id="navLinks"></div>
 </nav>
 
 <div class="container">
   <div id="alert-box"></div>
-  <h2 id="pageالعنوان">إضافة تمرين</h2>
-  <div class="card">
+
+  <div class="loading-text" id="loadingState">
+    <div class="loading"></div>
+    <span>جارٍ التحميل...</span>
+  </div>
+
+  <div id="formContent" style="display:none;">
+    <div class="card">
+      <h2 id="pageTitle">إضافة تمرين جديد</h2>
     <form id="form">
-      <label for="title">العنوان</label>
-      <input type="text" id="title" name="title" required>
+        <label for="title">العنوان</label>
+        <input type="text" id="title" name="title" required>
 
-      <label for="question">السؤال</label>
-      <input type="text" id="question" name="question" required>
+        <label for="question">السؤال</label>
+        <input type="text" id="question" name="question" required>
 
-      <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-        <div style="flex:1; min-width:140px;">
-          <label>Option A</label>
-          <input type="text" name="option_a">
+        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+          <div style="flex:1; min-width:140px;">
+            <label>الخيار أ</label>
+            <input type="text" name="option_a" required>
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label>الخيار ب</label>
+            <input type="text" name="option_b" required>
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label>الخيار ج</label>
+            <input type="text" name="option_c" required>
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label>الخيار د</label>
+            <input type="text" name="option_d" required>
+          </div>
         </div>
-        <div style="flex:1; min-width:140px;">
-          <label>Option B</label>
-          <input type="text" name="option_b">
-        </div>
-        <div style="flex:1; min-width:140px;">
-          <label>Option C</label>
-          <input type="text" name="option_c">
-        </div>
-        <div style="flex:1; min-width:140px;">
-          <label>Option D</label>
-          <input type="text" name="option_d">
-        </div>
-      </div>
 
-      <label>الإجابة الصحيحة answer</label>
-      <div style="margin-bottom:1rem;">
-        <label style="font-weight:normal;"><input type="radio" name="correct_answer" value="A"> A</label>
-        <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="B"> B</label>
-        <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="C"> C</label>
-        <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="D"> D</label>
-      </div>
+        <label>الإجابة الصحيحة</label>
+        <div style="margin-bottom:1rem;">
+          <label style="font-weight:normal;"><input type="radio" name="correct_answer" value="A" required> أ</label>
+          <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="B"> ب</label>
+          <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="C"> ج</label>
+          <label style="font-weight:normal; margin-left:1rem;"><input type="radio" name="correct_answer" value="D"> د</label>
+        </div>
 
-      <label for="class_id">الصف</label>
-      <select id="class_id" name="class_id" required>
-        <option value="">اختر صفاً</option>
-      </select>
+        <label for="class_id">الصف الدراسي</label>
+        <select id="class_id" name="class_id" required>
+          <option value="">اختر صفاً</option>
+        </select>
 
-      <a href="/admin/programs.html" class="btn btn-ghost">إلغاء</a>
-      <button type="submit" class="btn btn-primary" id="submitBtn">إضافة تمرين</button>
-    </form>
+        <a href="programs.html" class="btn btn-ghost">إلغاء</a>
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">إضافة تمرين</button>
+      </form>
+    </div>
   </div>
 </div>
+
+<footer class="footer">
+  ثانوية الغايرة &mdash; جميع الحقوق محفوظة.
+</footer>
 
 <script>
 let profile, editId = null;
 const classSelect = document.getElementById('class_id');
 const form = document.getElementById('form');
 const submitBtn = document.getElementById('submitBtn');
-const pageالعنوان = document.getElementById('pageالعنوان');
+const pageTitle = document.getElementById('pageTitle');
 const urlParams = new URLSearchParams(window.location.search);
 editId = urlParams.get('id');
 
@@ -77,21 +90,24 @@ async function init() {
   profile = await requireAuth(true);
   if (!profile) return;
   await buildNavbar();
-  await loadالصفes();
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('formContent').style.display = 'block';
+  await loadClasses();
   if (editId) {
-    pageالعنوان.textContent = 'تعديل تمرين';
-    submitBtn.textContent = 'تحديث تمرين';
-    await loadالتمرين(editId);
+    pageTitle.textContent = 'تعديل تمرين';
+    submitBtn.textContent = 'تحديث التمرين';
+    await loadExercise(editId);
   }
 }
 
-async function loadالصفes() {
+async function loadClasses() {
   const { data } = await supabase.from('classes').select('*').order('name');
   classSelect.innerHTML = '<option value="">اختر صفاً</option>' +
     (data || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
 }
 
-async function loadالتمرين(id) {
+async function loadExercise(id) {
   const { data } = await supabase.from('exercises').select('*').eq('id', id).single();
   if (!data) return;
   document.getElementById('title').value = data.title;
@@ -107,6 +123,7 @@ async function loadالتمرين(id) {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const box = document.getElementById('alert-box');
+  const btn = document.getElementById('submitBtn');
   const payload = {
     title: document.getElementById('title').value,
     question: document.getElementById('question').value,
@@ -118,14 +135,34 @@ form.addEventListener('submit', async (e) => {
     class_id: parseInt(classSelect.value)
   };
 
+  if (!payload.title || !payload.question || !payload.class_id) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">الرجاء ملء جميع الحقول الإجبارية.</div>';
+    return;
+  }
+
+  box.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'جارٍ الحفظ...';
+
   if (editId) {
     const { error } = await supabase.from('exercises').update(payload).eq('id', editId);
-    if (error) { box.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>'; return; }
+    if (error) {
+      box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'تحديث التمرين';
+      return;
+    }
   } else {
     const { error } = await supabase.from('exercises').insert(payload);
-    if (error) { box.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>'; return; }
+    if (error) {
+      box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'إضافة تمرين';
+      return;
+    }
   }
-  window.location.href = 'programs.html';
+  box.innerHTML = '<div class="alert alert-success" role="alert">تم الحفظ بنجاح.</div>';
+  setTimeout(() => { window.location.href = 'programs.html'; }, 1000);
 });
 
 init();

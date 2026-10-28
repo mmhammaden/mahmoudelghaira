@@ -3,63 +3,114 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تماريني - Ghaira</title>
+<title>تماريني – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
 </head>
 <body>
 <nav class="navbar">
-  <a href="/dashboard.html" class="brand">Ghaira</a>
+  <a href="../index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links" id="navLinks"></div>
 </nav>
 
 <div class="container">
   <div id="alert-box"></div>
-  <h2>تماريني</h2>
-  <p class="small-note">Do the exercises below. النتائج are saved automatically.</p>
-  <div id="exercisesList"></div>
+
+  <div class="loading-text" id="loadingState">
+    <div class="loading"></div>
+    <span>جارٍ تحميل التمارين...</span>
+  </div>
+
+  <div id="exercisesContent" style="display:none;">
+    <h2>تماريني</h2>
+    <p class="small-note">قم بأداء التمارين أدناه. يتم حفظ النتائج تلقائياً.</p>
+
+    <div class="stat-row mb-2">
+      <div class="stat">
+        <div class="value" id="statTotal">0</div>
+        <div class="label">إجمالي التمارين</div>
+      </div>
+      <div class="stat">
+        <div class="value" id="statCompleted">0</div>
+        <div class="label">مكتمل</div>
+      </div>
+      <div class="stat">
+        <div class="value" id="statRemaining">0</div>
+        <div class="label">باقٍ</div>
+      </div>
+    </div>
+
+    <div id="exercisesList"></div>
+  </div>
 </div>
+
+<footer class="footer">
+  ثانوية الغايرة &mdash; جميع الحقوق محفوظة.
+</footer>
 
 <script>
 let profile;
+
 async function init() {
   profile = await requireAuth();
   if (!profile) return;
   await buildNavbar();
-  await loadالتمارين();
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('exercisesContent').style.display = 'block';
+  await loadExercises();
 }
 
-async function loadالتمارين() {
-  const { data, error } = await supabase
+async function loadExercises() {
+  const container = document.getElementById('exercisesList');
+
+  const { data: exercises, error } = await supabase
     .from('exercises')
-    .select(`*, classes ( name )`)
+    .select('*, classes ( name )')
     .eq('class_id', profile.class_id)
     .order('id', { ascending: false });
-  if (error) { showAlert(error.message, 'error'); return; }
 
-  // Load existing results for this user
+  if (error) {
+    showAlert(translateError(error.message), 'error');
+    return;
+  }
+
   const { data: results } = await supabase
     .from('results')
     .select('exercise_id')
     .eq('user_id', profile.id);
   const doneIds = new Set((results || []).map(r => r.exercise_id));
 
-  const container = document.getElementById('exercisesList');
-  if ((data || []).length === 0) {
-    container.innerHTML = '<p class="small-note">لا توجد تمارين متاحة لصفك بعد.</p>';
+  // Update stats
+  const total = (exercises || []).length;
+  const completed = doneIds.size;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statCompleted').textContent = completed;
+  document.getElementById('statRemaining').textContent = total - completed;
+
+  if ((exercises || []).length === 0) {
+    showEmpty('exercisesList', 'لا توجد تمارين متاحة لصفك بعد.', 'سيظهر التمارين هنا عندما يضيفها المعلم.');
     return;
   }
 
-  container.innerHTML = (data || []).map(e => `
+  container.innerHTML = (exercises || []).map(e => `
     <div class="exercise">
-      <h3>${escapeHtml(e.title)}</h3>
-      <p>${escapeHtml(e.question)}</p>
-      ${doneIds.has(e.id) ?
-        '<span class="done">&#10003; Completed</span>' :
-        '<a href="/student/take.html?id=' + escapeHtml(e.id) + '" class="btn btn-primary btn-small">Start exercise</a>'
-      }
+      <div style="display:flex; justify-content:space-between; align-items:start; gap:1rem;">
+        <div>
+          <h3>${escapeHtml(e.title)}</h3>
+          <p>${escapeHtml(e.question)}</p>
+          <p class="small-note">الصف: ${escapeHtml(e.classes?.name || '-')}</p>
+        </div>
+        <div style="text-align:left;">
+          ${doneIds.has(e.id)
+            ? statusBadge(true)
+            : `<a href="/student/take.html?id=${e.id}" class="btn btn-primary btn-sm">ابدأ التمرين</a>`}
+        </div>
+      </div>
+      ${doneIds.has(e.id) ? '<a href="/student/take.html?id=' + e.id + '" class="btn btn-ghost btn-sm mt-1">إعادة التمرين</a>' : ''}
     </div>
   `).join('');
 }

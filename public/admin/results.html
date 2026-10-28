@@ -3,21 +3,116 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>النتائج - Ghaira</title>
+<title>النتائج – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
 </head>
 <body>
 <nav class="navbar">
-  <a href="dashboard.html" class="brand">Ghaira</a>
+  <a href="../index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links" id="navLinks"></div>
 </nav>
 
 <div class="container">
   <div id="alert-box"></div>
-  <h2>All النتائج</h2>
+
+  <div class="loading-text" id="loadingState">
+    <div class="loading"></div>
+    <span>جارٍ تحميل النتائج...</span>
+  </div>
+
+  <div id="resultsContent" style="display:none;">
+    <h2>جميع النتائج</h2>
+
+    <form class="filter-form">
+      <select id="filterClass">
+        <option value="">جميع الصفوف</option>
+      </select>
+      <select id="filterStudent">
+        <option value="">جميع الطلاب</option>
+      </select>
+      <button type="button" class="btn btn-primary btn-sm" onclick="loadResults()">تصفية</button>
+      <a href="/admin/results.html" class="btn btn-ghost btn-sm">إعادة الضبط</a>
+    </form>
+
+    <table id="resultsTable">
+      <thead>
+        <tr><th>الطالب</th><th>الصف</th><th>التمرين</th><th>النتيجة</th><th>تاريخ الإرسال</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<footer class="footer">
+  ثانوية الغايرة &mdash; جميع الحقوق محفوظة.
+</footer>
+
+<script>
+let profile;
+
+async function init() {
+  profile = await requireAuth(true);
+  if (!profile) return;
+  await buildNavbar();
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('resultsContent').style.display = 'block';
+  await loadFilters();
+  await loadResults();
+}
+
+async function loadFilters() {
+  const [cRes, sRes] = await Promise.all([
+    supabase.from('classes').select('*').order('name'),
+    supabase.from('profiles').select('id, name').eq('role', 'student').order('name')
+  ]);
+
+  document.getElementById('filterClass').innerHTML = '<option value="">جميع الصفوف</option>' +
+    (cRes.data || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
+
+  document.getElementById('filterStudent').innerHTML = '<option value="">جميع الطلاب</option>' +
+    (sRes.data || []).map(s => '<option value="' + s.id + '">' + escapeHtml(s.name) + '</option>').join('');
+}
+
+async function loadResults() {
+  let query = supabase
+    .from('results')
+    .select(`
+      id, score, total, submitted_at,
+      profiles ( name, class_id, classes ( name ) ),
+      exercises ( title )
+    `)
+    .order('submitted_at', { ascending: false });
+
+  const classId = document.getElementById('filterClass').value;
+  const studentId = document.getElementById('filterStudent').value;
+  if (classId) query = query.eq('profiles.class_id', parseInt(classId));
+  if (studentId) query = query.eq('profiles.id', studentId);
+
+  const { data, error } = await query;
+  if (error) { showAlert(translateError(error.message), 'error'); return; }
+
+  const tbody = document.querySelector('#resultsTable tbody');
+  tbody.innerHTML = (data || []).map(r => {
+    const p = r.profiles;
+    return `<tr>
+      <td>${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(p.classes?.name) || '-'}</td>
+      <td>${escapeHtml(r.exercises?.title) || 'التمرين #' + escapeHtml(r.exercise_id)}</td>
+      <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
+      <td>${escapeHtml(formatDate(r.submitted_at))}</td>
+    </tr>`;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>
   <form class="filter-form">
     <select id="filterالصف">
       <option value="">جميع الصفوف</option>

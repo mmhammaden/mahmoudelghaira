@@ -119,14 +119,19 @@ def init_db():
         db.commit()
         cur.close()
 
-        # Seed classes if empty
+        # Seed classes if empty — Algerian secondary school classes
         cur = db.cursor()
         cur.execute("SELECT COUNT(*) FROM classes")
         count = cur.fetchone()
         if count[0] == 0:
             cur.executemany(
                 _adapt("INSERT INTO classes (name) VALUES (?)"),
-                [("Class A",), ("Class B",), ("Class C",)],
+                [
+                    ("2AS رياضيات",),
+                    ("3AS PC",),
+                    ("3AS SNV",),
+                    ("1AS",),
+                ],
             )
             db.commit()
         cur.close()
@@ -141,7 +146,7 @@ def init_db():
                     "INSERT INTO users (name, phone, password_hash, role, class_id) "
                     "VALUES (?, ?, ?, ?, ?)"
                 ),
-                ("Administrator", "31406022", generate_password_hash("admin123"), "admin", None),
+                ("المشرف العام", "31406022", generate_password_hash("admin123"), "admin", None),
             )
             db.commit()
         cur.close()
@@ -154,12 +159,12 @@ def init_db():
             cur.execute("SELECT id, name FROM classes ORDER BY id")
             classes = cur.fetchall()
             sample = [
-                ("Math Quiz 1", "What is 2 + 2?", "3", "4", "5", "6", "B", classes[0]["id"]),
-                ("Math Quiz 2", "What is 5 x 6?", "25", "30", "35", "40", "B", classes[0]["id"]),
-                ("Science Quiz 1", "Which planet is known as the Red Planet?", "Earth", "Mars", "Jupiter", "Venus", "B", classes[1]["id"]),
-                ("Science Quiz 2", "What is H2O commonly known as?", "Oxygen", "Hydrogen", "Water", "Acid", "C", classes[1]["id"]),
-                ("English Quiz 1", "Which word is a noun?", "Run", "Quickly", "Dog", "Happy", "C", classes[2]["id"]),
-                ("English Quiz 2", "Which is a plural noun?", "Cat", "Child", "Mice", "Goose", "C", classes[2]["id"]),
+                ("اختبار رياضيات 1", "كم equals 2 + 2؟", "3", "4", "5", "6", "B", classes[0]["id"]),
+                ("اختبار رياضيات 2", "كم equals 5 × 6؟", "25", "30", "35", "40", "B", classes[0]["id"]),
+                ("اختبار علوم 1", "أي كوكب يُعرف بالكوكب الأحمر؟", "الأرض", "المريخ", "المشتري", "الزهرة", "B", classes[1]["id"]),
+                ("اختبار علوم 2", "H2O تُعرف عادة باسم؟", "الأكسجين", "الهيدروجين", "الماء", "الحمض", "C", classes[1]["id"]),
+                ("اختبار لغة إنجليزية 1", "أي كلمة هي اسم؟", "Run", "Quickly", "Dog", "Happy", "C", classes[2]["id"]),
+                ("اختبار لغة إنجليزية 2", "أي اسم يجمع؟", "Cat", "Child", "Mice", "Goose", "C", classes[2]["id"]),
             ]
             cur.executemany(
                 _adapt(

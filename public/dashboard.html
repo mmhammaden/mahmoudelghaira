@@ -3,45 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard - Ghaira</title>
+<title>لوحة التحكم – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/auth.js"></script>
 </head>
 <body>
 <nav class="navbar">
-  <a href="dashboard.html" class="brand">Ghaira</a>
+  <a href="../index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links" id="navLinks"></div>
 </nav>
 
 <div class="container">
   <div id="alert-box"></div>
-  <h2>Loading...</h2>
+  <div class="loading-text" id="loadingState">
+    <div class="loading"></div>
+    <span>جارٍ التحميل...</span>
+  </div>
+  <div id="dashboardContent" style="display:none;">
+    <h2>لوحة التحكم</h2>
+    <p class="small-note">مرحباً، <span id="userName"></span>. اختر خياراً من القائمة أعلاه للمتابعة.</p>
+  </div>
 </div>
 
 <script>
-const navLinks = document.getElementById('navLinks');
-const alertBox = document.getElementById('alert-box');
-
 async function init() {
-  const session = await getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
+  const profile = await requireAuth();
+  if (!profile) return;
+  await buildNavbar();
 
-  const { data: profile } = await supabase
-    .from('profiles').select('*').eq('id', session.user.id).single();
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('dashboardContent').style.display = 'block';
+  document.getElementById('userName').textContent = profile.name;
 
-  if (!profile) {
-    alertBox.innerHTML = '<div class="alert alert-error">الملف الشخصي غير موجود.</div>';
-    return;
-  }
-
-  // Build nav
   if (profile.role === 'admin') {
-    navLinks.innerHTML = '<a href="/admin/dashboard.html">الإدارة</a><a href="/admin/programs.html">البرامج</a><a href="/admin/users.html">المستخدمون</a><a href="/admin/results.html">النتائج</a><a href="#" class="danger" onclick="event.preventDefault(); signOut()">تسجيل الخروج</a>';
     window.location.href = '/admin/dashboard.html';
   } else {
-    navLinks.innerHTML = '<a href="/student/exercises.html">التمارين</a><a href="/student/results.html">نتائجتي</a><a href="#" class="danger" onclick="signOut()">تسجيل الخروج</a>';
     window.location.href = '/student/exercises.html';
   }
 }

@@ -3,104 +3,154 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>التسجيل - Ghaira</title>
+<title>إنشاء حساب – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
 </head>
 <body>
 <nav class="navbar">
-  <a href="login.html" class="brand">Ghaira</a>
+  <a href="index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links">
+    <a href="index.html">الرئيسية</a>
     <a href="login.html">تسجيل الدخول</a>
-    <a href="register.html">التسجيل</a>
   </div>
 </nav>
 
 <div class="container">
   <div class="card">
-    <h2>التسجيل</h2>
+    <h2>إنشاء حساب جديد</h2>
     <div id="alert-box"></div>
     <form id="registerForm">
       <label for="name">الاسم الكامل</label>
-      <input type="text" id="name" name="name" required>
+      <input type="text" id="name" name="name" placeholder="مثال: أحمد محمد علي" required>
 
       <label for="phone">رقم الهاتف</label>
-      <input type="text" id="phone" name="phone" placeholder="رقم الهاتف" required>
-      <p class="small-note">Format only — no verification of ownership.</p>
+      <input type="text" id="phone" name="phone" placeholder="مثال: 31406022" required>
+      <p class="small-note">رقم الهاتف مكون من 8 أرقام يبدأ بـ 2 أو 3 أو 4. لا يتم التحقق من ملكية الرقم.</p>
 
       <label for="password">كلمة المرور</label>
-      <input type="password" id="password" name="password" required>
-      <p class="small-note">Simple password (at least 6 characters).</p>
+      <div class="field-group" style="position: relative;">
+        <input type="password" id="password" name="password" required>
+        <button type="button" id="togglePassword" class="btn btn-ghost btn-sm" style="position: absolute; left: 0.5rem; top: 2.2rem;">إظهار</button>
+      </div>
+      <p class="small-note">يجب ألا تقل كلمة المرور عن 6 أحرف.</p>
 
-      <label for="class_id">الصف</label>
+      <label for="class_id">الصف الدراسي</label>
       <select id="class_id" name="class_id" required>
         <option value="">اختر صفاً</option>
       </select>
+      <p class="small-note">يُسمح للطلاب المسجلين فقط بإنشاء حساب.</p>
 
-      <button type="submit" class="btn btn-primary">التسجيل</button>
+      <button type="submit" class="btn btn-primary btn-block" id="registerBtn">إنشاء الحساب</button>
     </form>
-    <p class="small-note">Already have an account? <a href="login.html">تسجيل الدخول</a></p>
+    <p class="text-center small-note mt-2">لديك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a></p>
   </div>
 </div>
 
+<footer class="footer">
+  ثانوية الغايرة &mdash; جميع الحقوق محفوظة.
+</footer>
+
 <script>
+const togglePassword = document.getElementById('togglePassword');
+const passwordInput = document.getElementById('password');
+let showPassword = false;
+
+togglePassword.addEventListener('click', () => {
+  showPassword = !showPassword;
+  passwordInput.type = showPassword ? 'text' : 'password';
+  togglePassword.textContent = showPassword ? 'إخفاء' : 'إظهار';
+});
+
 const classSelect = document.getElementById('class_id');
 
-async function loadالصفes() {
+async function loadClasses() {
   const { data, error } = await supabase.from('classes').select('*').order('name');
-  if (error) { showAlert(error.message, 'error'); return; }
+  if (error) { showAlert(translateError(error.message), 'error'); return; }
   classSelect.innerHTML = '<option value="">اختر صفاً</option>' +
-    data.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
+    (data || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
 }
-loadالصفes();
+loadClasses();
 
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const box = document.getElementById('alert-box');
+  const btn = document.getElementById('registerBtn');
   const name = document.getElementById('name').value.trim();
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
   const class_id = document.getElementById('class_id').value;
 
+  box.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'جارٍ إنشاء الحساب...';
+
   const phoneRegex = /^[234]\d{7}$/;
-  if (!name) { box.innerHTML = '<div class="alert alert-error">الاسم is required.</div>'; return; }
-  if (!phoneRegex.test(phone)) { box.innerHTML = '<div class="alert alert-error">الهاتف must be 8 digits starting with 2, 3, or 4.</div>'; return; }
-  if (!password || password.length < 6) { box.innerHTML = '<div class="alert alert-error">كلمة المرور must be at least 6 characters.</div>'; return; }
-  if (!class_id) { box.innerHTML = '<div class="alert alert-error">Please select a class.</div>'; return; }
 
-  // Sign up user in Supabase Auth
-  const { data, error } = await supabase.auth.signUp({
-    phone: phone,
-    password: password,
-    options: { data: { name: name, class_id: class_id, role: 'student' } }
-  });
-
-  if (error) {
-    box.innerHTML = '<div class="alert alert-error">' + error.message + '</div>';
+  if (!name) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">الرجاء إدخال الاسم الكامل.</div>';
+    btn.disabled = false;
+    btn.textContent = 'إنشاء الحساب';
+    return;
+  }
+  if (!phoneRegex.test(phone)) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">رقم الهاتف غير صالح. يجب أن يكون 8 أرقام ويبدأ بـ 2 أو 3 أو 4.</div>';
+    btn.disabled = false;
+    btn.textContent = 'إنشاء الحساب';
+    return;
+  }
+  if (!password || password.length < 6) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">يجب ألا تقل كلمة المرور عن 6 أحرف.</div>';
+    btn.disabled = false;
+    btn.textContent = 'إنشاء الحساب';
+    return;
+  }
+  if (!class_id) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">الرجاء اختيار الصف.</div>';
+    btn.disabled = false;
+    btn.textContent = 'إنشاء الحساب';
     return;
   }
 
-  // Insert profile row
-  if (data.user) {
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      name: name,
+  try {
+    const { data, error } = await supabase.auth.signUp({
       phone: phone,
-      role: 'student',
-      class_id: parseInt(class_id)
+      password: password,
+      options: { data: { name: name, class_id: class_id, role: 'student' } }
     });
-    if (profileError) {
-      // Auth user was created but profile insert failed; surface the error
-      // and do NOT redirect the user to a broken account.
-      box.innerHTML = '<div class="alert alert-error">' + escapeHtml(profileError.message) + '</div>';
+
+    if (error) {
+      box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'إنشاء الحساب';
       return;
     }
-  }
 
-  box.innerHTML = '<div class="alert alert-success">Registration successful. Please log in.</div>';
-  setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+    if (data.user) {
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        name: name,
+        phone: phone,
+        role: 'student',
+        class_id: parseInt(class_id)
+      });
+      if (profileError) {
+        box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(profileError.message)) + '</div>';
+        btn.disabled = false;
+        btn.textContent = 'إنشاء الحساب';
+        return;
+      }
+    }
+
+    box.innerHTML = '<div class="alert alert-success" role="alert">تم إنشاء الحساب بنجاح. يرجى تسجيل الدخول.</div>';
+    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+  } catch (err) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(err.message)) + '</div>';
+    btn.disabled = false;
+    btn.textContent = 'إنشاء الحساب';
+  }
 });
 </script>
 </body>

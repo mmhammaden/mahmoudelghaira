@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تسجيل الدخول - Ghaira</title>
+<title>تسجيل الدخول – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
 </head>
 <body>
 <nav class="navbar">
-  <a href="login.html" class="brand">Ghaira</a>
+  <a href="index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links">
-    <a href="login.html">تسجيل الدخول</a>
-    <a href="register.html">التسجيل</a>
+    <a href="index.html">الرئيسية</a>
+    <a href="register.html">إنشاء حساب</a>
   </div>
 </nav>
 
@@ -24,30 +24,61 @@
     <div id="alert-box"></div>
     <form id="loginForm">
       <label for="phone">رقم الهاتف</label>
-      <input type="text" id="phone" name="phone" placeholder="رقم الهاتف" required>
+      <input type="text" id="phone" name="phone" placeholder="مثال: 31406022" required>
+      <p class="small-nite">رقم الهاتف مكون من 8 أرقام يبدأ بـ 2 أو 3 أو 4.</p>
 
-      <label for="password">كلمة المرور</label>
-      <input type="password" id="password" name="password" required>
+      <div class="field-group" style="position: relative;">
+        <label for="password">كلمة المرور</label>
+        <input type="password" id="password" name="password" required>
+        <button type="button" id="togglePassword" class="btn btn-ghost btn-sm" style="position: absolute; left: 0.5rem; top: 2.2rem;">إظهار</button>
+      </div>
 
-      <button type="submit" class="btn btn-primary">تسجيل الدخول</button>
+      <button type="submit" class="btn btn-primary btn-block" id="loginBtn">تسجيل الدخول</button>
     </form>
-    <p class="small-note">ليس لديك حساب؟ <a href="register.html">التسجيل هنا</a></p>
+    <p class="text-center small-note mt-2">ليس لديك حساب؟ <a href="register.html">إنشاء حساب جديد</a></p>
   </div>
 </div>
 
+<footer class="footer">
+  ثانوية الغايرة &mdash; جميع الحقوق محفوظة.
+</footer>
+
 <script>
+const togglePassword = document.getElementById('togglePassword');
+const passwordInput = document.getElementById('password');
+let showPassword = false;
+
+togglePassword.addEventListener('click', () => {
+  showPassword = !showPassword;
+  passwordInput.type = showPassword ? 'text' : 'password';
+  togglePassword.textContent = showPassword ? 'إخفاء' : 'إظهار';
+});
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const box = document.getElementById('alert-box');
+  const btn = document.getElementById('loginBtn');
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  const { error } = await supabase.auth.signInWithPassword({ phone, password });
-  if (error) {
-    box.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>';
-    return;
+  box.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'جارٍ تسجيل الدخول...';
+
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ phone, password });
+    if (error) {
+      box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'تسجيل الدخول';
+      return;
+    }
+    window.location.href = 'dashboard.html';
+  } catch (err) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(err.message)) + '</div>';
+    btn.disabled = false;
+    btn.textContent = 'تسجيل الدخول';
   }
-  window.location.href = 'dashboard.html';
 });
 </script>
 </body>
