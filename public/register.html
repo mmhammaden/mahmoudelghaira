@@ -5,9 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إنشاء حساب – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/config.js"></script>
 <script src="../js/ui.js"></script>
+<script src="../js/api.js"></script>
 </head>
 <body>
 <nav class="navbar">
@@ -27,7 +26,7 @@
       <input type="text" id="name" name="name" placeholder="مثال: أحمد محمد علي" required>
 
       <label for="phone">رقم الهاتف</label>
-      <input type="text" id="phone" name="phone" placeholder="مثال: 31406022" required>
+      <input type="tel" id="phone" name="phone" inputmode="numeric" autocomplete="tel" placeholder="مثال: 31406022" required>
       <p class="small-note">رقم الهاتف مكون من 8 أرقام يبدأ بـ 2 أو 3 أو 4. لا يتم التحقق من ملكية الرقم.</p>
 
       <label for="password">كلمة المرور</label>
@@ -67,10 +66,13 @@ togglePassword.addEventListener('click', () => {
 const classSelect = document.getElementById('class_id');
 
 async function loadClasses() {
-  const { data, error } = await supabase.from('classes').select('*').order('name');
-  if (error) { showAlert(translateError(error.message), 'error'); return; }
-  classSelect.innerHTML = '<option value="">اختر صفاً</option>' +
-    (data || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
+  try {
+    const data = await apiGet('/api/classes');
+    classSelect.innerHTML = '<option value="">اختر صفاً</option>' +
+      (data.classes || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
+  } catch (err) {
+    showAlert(err.message, 'error');
+  }
 }
 loadClasses();
 
@@ -87,15 +89,13 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
   btn.disabled = true;
   btn.textContent = 'جارٍ إنشاء الحساب...';
 
-  const phoneRegex = /^[234]\d{7}$/;
-
   if (!name) {
     box.innerHTML = '<div class="alert alert-error" role="alert">الرجاء إدخال الاسم الكامل.</div>';
     btn.disabled = false;
     btn.textContent = 'إنشاء الحساب';
     return;
   }
-  if (!phoneRegex.test(phone)) {
+  if (!/^[234]\d{7}$/.test(phone)) {
     box.innerHTML = '<div class="alert alert-error" role="alert">رقم الهاتف غير صالح. يجب أن يكون 8 أرقام ويبدأ بـ 2 أو 3 أو 4.</div>';
     btn.disabled = false;
     btn.textContent = 'إنشاء الحساب';
@@ -115,34 +115,9 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
   }
 
   try {
-    const { data, error } = await supabase.auth.signUp({
-      phone: phone,
-      password: password,
-      options: { data: { name: name, class_id: class_id, role: 'student' } }
+    await apiPost('/api/auth/register', {
+      name, phone, password, class_id: Number(class_id)
     });
-
-    if (error) {
-      box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
-      btn.disabled = false;
-      btn.textContent = 'إنشاء الحساب';
-      return;
-    }
-
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        name: name,
-        phone: phone,
-        role: 'student',
-        class_id: parseInt(class_id)
-      });
-      if (profileError) {
-        box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(profileError.message)) + '</div>';
-        btn.disabled = false;
-        btn.textContent = 'إنشاء الحساب';
-        return;
-      }
-    }
 
     box.innerHTML = '<div class="alert alert-success" role="alert">تم إنشاء الحساب بنجاح. يرجى تسجيل الدخول.</div>';
     setTimeout(() => { window.location.href = 'login.html'; }, 1500);

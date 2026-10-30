@@ -655,36 +655,25 @@ def student_results():
     return render_template("student_results.html", results=results)
 
 
-# --------------------------------------------------------------------------- #
-# Admin API — Supabase Auth helpers
-# --------------------------------------------------------------------------- #
-# Delete a user's Supabase Auth account. Requires the service role key
-# (SUPABASE_SERVICE_ROLE_KEY env var) because the anon key cannot delete
-# other users' auth accounts.
 
+# --------------------------------------------------------------------------- #
+# Admin API — Neon PostgreSQL Auth
+# --------------------------------------------------------------------------- #
+# Delete a user account via Neon PostgreSQL.
+# Removes the user's profile, results, and any associated data.
 
 @app.route('/api/admin/users/delete', methods=['POST'])
-def admin_user_delete_auth():
+def admin_user_delete_neon():
     data = request.get_json(silent=True) or {}
     user_id = data.get('user_id')
     if not user_id:
         return {'error': 'Missing user_id'}, 400
 
-    service_role_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
-    if not service_role_key:
-        return {'error': 'Service role key not configured'}, 500
+    # Delete associated results first, then profile (foreign key constraint order)
+    execute_db("DELETE FROM results WHERE user_id = ?", user_id, commit=True)
+    execute_db("DELETE FROM profiles WHERE id = ?", user_id, commit=True)
 
-    project_url = os.environ.get('SUPABASE_URL', 'https://vjzogmivmohrygundsgk.supabase.co')
-    url = f'{project_url}/auth/v1/admin/users/{user_id}'
-    headers = {
-        'Authorization': f'Bearer {service_role_key}',
-        'Content-Type': 'application/json',
-    }
-    resp = requests.delete(url, headers=headers)
-    if resp.status_code not in (200, 204):
-        return {'error': resp.text or f'HTTP {resp.status_code}'}, resp.status_code
     return {'ok': True}
-
 
 # --------------------------------------------------------------------------- #
 # Run

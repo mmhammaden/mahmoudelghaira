@@ -5,16 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>أداء التمرين – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/config.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
 </head>
-<body>
+<body class="student-learning-page">
 <nav class="navbar">
   <a href="../index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links" id="navLinks"></div>
 </nav>
+
+<div class="cmath-shell">
+<aside class="cmath-sidebar">
+  <div class="cmath-ad-space" aria-hidden="true"></div>
+  <div class="cmath-user-box"><div class="cmath-user-name" id="sideStudentName">Élève</div><div class="cmath-score">Exercice en cours</div></div>
+  <nav class="cmath-side-menu" aria-label="Menu élève">
+    <a href="/student/exercises.html" class="active">Exercices</a>
+    <a href="/student/results.html">Bilan</a>
+    <button type="button" onclick="signOut()">Déconnexion</button>
+  </nav>
+  <div class="cmath-calculator" aria-hidden="true"><div class="cmath-screen">0</div><div class="cmath-keys"><span>√</span><span>^</span><span>←</span><span>CE</span><span>+</span><span>7</span><span>8</span><span>9</span><span>−</span><span>4</span><span>5</span><span>6</span><span>×</span><span>1</span><span>2</span><span>3</span><span>÷</span><span>0</span><span>±</span><span>=</span></div></div>
+</aside>
+<main class="cmath-main">
+  <header class="cmath-header">
+    <div class="cmath-logo"><span class="c-blue">A</span><span class="c-red">p</span><span class="c-orange">p</span><span class="c-green">r</span><span class="c-blue">e</span><span class="c-orange">n</span><span class="c-green">d</span><span class="c-red">r</span><span class="c-blue">e</span><b> les maths</b><span class="c-green">!</span></div>
+    <div class="cmath-levels"><span>6ème</span><span>5ème</span><span>4ème</span><span>3ème</span><span class="active">2AS</span><span>3AS</span><span>4AS</span><span>5D</span><span>6A</span></div>
+  </header>
 
 <div class="container">
   <div id="alert-box"></div>
@@ -24,28 +40,29 @@
     <span>جارٍ تحميل التمرين...</span>
   </div>
 
-  <div id="takeContent" style="display:none;">
-    <h2 id="exTitle">التمرين</h2>
-    <div class="card">
+  <div id="takeContent" class="take-shell" style="display:none;">
+    <div class="take-topline">
+      <span>2AS · Mathématiques</span>
+      <a href="/student/exercises.html" id="cancelLink" class="lesson-back">← Retour au chapitre</a>
+    </div>
+    <div class="math-paper">
       <form id="answerForm">
-        <p id="exQuestion"></p>
-        <div class="field-group">
-          <label><input type="radio" name="answer" value="A" required> <span id="optA"></span></label>
+        <span class="lesson-kicker">Exercice</span>
+        <h1 id="exTitle">التمرين</h1>
+        <p id="exQuestion" class="math-question" dir="ltr"></p>
+        <p class="answer-instruction">Choisis la bonne réponse :</p>
+        <div class="answer-grid" dir="ltr">
+          <label class="answer-choice"><input type="radio" name="answer" value="A" required><span class="answer-letter">A</span><span id="optA"></span></label>
+          <label class="answer-choice"><input type="radio" name="answer" value="B"><span class="answer-letter">B</span><span id="optB"></span></label>
+          <label class="answer-choice"><input type="radio" name="answer" value="C"><span class="answer-letter">C</span><span id="optC"></span></label>
+          <label class="answer-choice"><input type="radio" name="answer" value="D"><span class="answer-letter">D</span><span id="optD"></span></label>
         </div>
-        <div class="field-group">
-          <label><input type="radio" name="answer" value="B"> <span id="optB"></span></label>
-        </div>
-        <div class="field-group">
-          <label><input type="radio" name="answer" value="C"> <span id="optC"></span></label>
-        </div>
-        <div class="field-group">
-          <label><input type="radio" name="answer" value="D"> <span id="optD"></span></label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">إرسال الإجابة</button>
-        <a href="/student/exercises.html" class="btn btn-ghost btn-block mt-1">إلغاء</a>
+        <button type="submit" class="btn btn-primary btn-block math-submit" id="submitBtn">Valider ma réponse</button>
       </form>
     </div>
   </div>
+</div>
+</main>
 </div>
 
 <footer class="footer">
@@ -60,6 +77,7 @@ exerciseId = urlParams.get('id');
 async function init() {
   profile = await requireAuth();
   if (!profile) return;
+  document.getElementById('sideStudentName').textContent = profile.name || 'Élève';
   await buildNavbar();
 
   document.getElementById('loadingState').style.display = 'none';
@@ -68,25 +86,22 @@ async function init() {
 }
 
 async function loadExercise() {
-  const { data, error } = await supabase
-    .from('exercises')
-    .select('*, classes ( name )')
-    .eq('id', parseInt(exerciseId))
-    .eq('class_id', profile.class_id)
-    .single();
+  try {
+    const data = await apiGet('/api/exercises/' + exerciseId);
 
-  if (error || !data) {
-    document.getElementById('alert-box').innerHTML = '<div class="alert alert-error" role="alert">التمرين غير موجود أو غير متوفر لصفك.</div>';
-    return;
+    document.getElementById('exTitle').textContent = data.title;
+    document.getElementById('exQuestion').textContent = data.question;
+    document.getElementById('optA').textContent = data.option_a;
+    document.getElementById('optB').textContent = data.option_b;
+    document.getElementById('optC').textContent = data.option_c;
+    document.getElementById('optD').textContent = data.option_d;
+    if (data.chapter_id) {
+      document.getElementById('cancelLink').href = '/student/exercises.html?chapter_id=' + data.chapter_id;
+    }
+    window.exerciseData = data;
+  } catch (err) {
+    document.getElementById('alert-box').innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(err.message) + '</div>';
   }
-
-  document.getElementById('exTitle').textContent = data.title;
-  document.getElementById('exQuestion').textContent = data.question;
-  document.getElementById('optA').textContent = data.option_a;
-  document.getElementById('optB').textContent = data.option_b;
-  document.getElementById('optC').textContent = data.option_c;
-  document.getElementById('optD').textContent = data.option_d;
-  window.exerciseData = data;
 }
 
 document.getElementById('answerForm').addEventListener('submit', async (e) => {
@@ -94,29 +109,24 @@ document.getElementById('answerForm').addEventListener('submit', async (e) => {
   const box = document.getElementById('alert-box');
   const btn = document.getElementById('submitBtn');
   const answer = document.querySelector('input[name="answer"]:checked').value;
-  const data = window.exerciseData;
-  const correct = answer === data.correct_answer ? 1 : 0;
 
   box.innerHTML = '';
   btn.disabled = true;
   btn.textContent = 'جارٍ الحفظ...';
 
-  const { error } = await supabase.from('results').insert({
-    user_id: profile.id,
-    exercise_id: data.id,
-    score: correct,
-    total: 1
-  });
+  try {
+    const result = await apiPost('/api/exercises/' + exerciseId + '/submit', { answer: answer });
 
-  if (error) {
-    box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
+    box.innerHTML = '<div class="alert alert-success" role="alert">تم حفظ النتيجة! إجابتك ' + (result.correct ? 'صحيحة.' : 'غير صحيحة.') + '</div>';
+    const returnUrl = window.exerciseData?.chapter_id
+      ? '/student/exercises.html?chapter_id=' + window.exerciseData.chapter_id
+      : '/student/exercises.html';
+    setTimeout(() => { window.location.href = returnUrl; }, 1500);
+  } catch (err) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(err.message) + '</div>';
     btn.disabled = false;
     btn.textContent = 'إرسال الإجابة';
-    return;
   }
-
-  box.innerHTML = '<div class="alert alert-success" role="alert">تم حفظ النتيجة! إجابتك ' + (correct ? 'صحيحة.' : 'غير صحيحة.') + '</div>';
-  setTimeout(() => { window.location.href = '/student/exercises.html'; }, 1500);
 });
 
 init();

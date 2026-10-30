@@ -1,0 +1,17 @@
+name = "ghaira-api"
+main = "src/worker.py"
+compatibility_date = "2026-10-28"
+compatibility_flags = ["python_workers"]
+workers_dev = true
+preview_urls = false
+
+[[d1_databases]]
+binding = "ghaira_db"
+database_name = "ghaira-db"
+database_id = "83116e1d-35ed-4ee3-97ba-fbc57547481f"
+
+[vars]
+FRONTEND_ORIGIN = "https://exercice7.web.app"
+
+[observability]
+enabled = true

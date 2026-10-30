@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نتائجتي – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/config.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
 </head>
 <body>
 <nav class="navbar">
@@ -55,31 +54,30 @@ async function init() {
 }
 
 async function loadResults() {
-  const { data, error } = await supabase
-    .from('results')
-    .select('*, exercises ( title )')
-    .eq('user_id', profile.id)
-    .order('submitted_at', { ascending: false });
+  try {
+    const data = await apiGet('/api/results');
+    const results = data.results || [];
 
-  if (error) { showAlert(translateError(error.message), 'error'); return; }
+    const tbody = document.querySelector('#resultsTable tbody');
+    if ((results || []).length === 0) {
+      showEmpty('resultsTable', 'لا توجد نتائج بعد.', 'ابدأ بأداء التمارين لتظهر نتائجك هنا.');
+      return;
+    }
 
-  const tbody = document.querySelector('#resultsTable tbody');
-  if ((data || []).length === 0) {
-    showEmpty('resultsTable', 'لا توجد نتائج بعد.', 'ابدأ بأداء التمارين لتظهر نتائجك هنا.');
-    return;
+    // Calculate average
+    const scores = results.map(r => r.score);
+    const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 0;
+
+    tbody.innerHTML = (results || []).map(r => `
+      <tr>
+        <td>${escapeHtml(r.exercise_title) || 'التمرين #' + escapeHtml(r.id)}</td>
+        <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
+        <td>${escapeHtml(formatDate(r.submitted_at))}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    showAlert(err.message, 'error');
   }
-
-  // Calculate average
-  const scores = data.map(r => r.score);
-  const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 0;
-
-  tbody.innerHTML = (data || []).map(r => `
-    <tr>
-      <td>${escapeHtml(r.exercises?.title) || 'التمرين #' + escapeHtml(r.exercise_id)}</td>
-      <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
-      <td>${escapeHtml(formatDate(r.submitted_at))}</td>
-    </tr>
-  `).join('');
 }
 
 init();

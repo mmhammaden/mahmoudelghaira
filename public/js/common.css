@@ -182,7 +182,7 @@ form label {
 }
 form input[type="text"],
 form input[type="password"],
-form input[type="email"],
+form input[type="tel"],
 form input[type="number"],
 form select,
 form textarea {
@@ -471,6 +471,133 @@ tr:last-child td { border-bottom: none; }
   .card { padding: 1rem; }
 }
 
+/* Cmath-faithful student layout */
+.student-learning-page { background: #fff; font-family: Arial, Helvetica, sans-serif; direction: ltr; }
+.student-learning-page > .navbar { display: none; }
+.cmath-shell { min-height: 100vh; display: grid; grid-template-columns: 31.25% 1fr; background: #fff; }
+.cmath-sidebar {
+  min-height: 100vh;
+  padding: 5px;
+  background: #e9e9e9;
+  border-right: 1px solid #d7d7d7;
+}
+.cmath-ad-space { height: 290px; border: 1px solid #777; border-radius: 5px; background: #eee; margin-bottom: 5px; }
+.cmath-user-box { display: grid; grid-template-columns: 1fr 132px; gap: 4px; margin-bottom: 5px; }
+.cmath-user-name, .cmath-score {
+  min-height: 41px; display: grid; place-items: center;
+  border: 1px solid #888; border-radius: 5px; background: #fafafa;
+  color: #222; font-size: 13px;
+}
+.cmath-side-menu { float: right; width: 132px; display: grid; gap: 4px; }
+.cmath-side-menu a, .cmath-side-menu button {
+  min-height: 38px; display: grid; place-items: center;
+  border: 1px solid #888; border-radius: 5px; background: #fafafa;
+  color: #111; font: 13px Arial, sans-serif; cursor: pointer; text-decoration: none;
+}
+.cmath-side-menu a:hover, .cmath-side-menu button:hover, .cmath-side-menu .active { background: #ddd; text-decoration: none; }
+.cmath-calculator { margin-right: 137px; margin-top: 46px; border: 1px solid #999; background: #f7f7f7; }
+.cmath-screen { height: 39px; border: 2px solid #222; border-radius: 4px; margin: 3px; padding: 8px; text-align: right; }
+.cmath-keys { display: grid; grid-template-columns: repeat(5, 1fr); }
+.cmath-keys span { min-height: 38px; display: grid; place-items: center; border: 1px solid #eee; font-size: 12px; }
+
+.cmath-main { min-width: 0; direction: ltr; }
+.cmath-header { padding: 3px 14px 0; }
+.cmath-logo { text-align: center; font: 700 34px/1.05 Arial, sans-serif; color: #000; margin-bottom: 2px; }
+.cmath-logo b { color: #000; }
+.c-blue { color: #0645ff; } .c-red { color: #f01d17; } .c-orange { color: #ff9a00; } .c-green { color: #00a321; }
+.cmath-levels { min-height: 46px; background: #c8c8c8; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px; }
+.cmath-levels span {
+  min-width: 55px; padding: 8px 10px; text-align: center;
+  border-radius: 12px; background: #f5f5f5; color: #111; font-size: 14px;
+  box-shadow: inset 0 -1px 0 #aaa;
+}
+.cmath-levels .active { background: #f3f3a5; font-weight: 700; }
+.student-learning-page .cmath-main > .container { max-width: 760px; padding-top: 34px; }
+.student-learning-page .footer { display: none; }
+
+.student-learning-page #chaptersView { text-align: center; }
+.student-learning-page #chaptersView > h2 {
+  width: 72%; margin: 0 auto 30px; padding: 2px 15px;
+  border: 1px solid #999; border-radius: 11px; background: #f3f3a5;
+  font: 700 22px Arial, sans-serif;
+}
+.student-learning-page #chaptersView > .small-note { display: none; }
+.student-learning-page .chapter-grid { display: grid; grid-template-columns: 210px; justify-content: center; gap: 19px; }
+.student-learning-page .chapter-card {
+  min-height: 42px; padding: 8px 12px; display: grid; gap: 1px;
+  border: 1px solid #888; border-radius: 11px; background: #e8e8e8;
+  box-shadow: none; text-align: center; font-family: Arial, sans-serif;
+}
+.student-learning-page .chapter-card:hover { transform: none; background: #d8d8d8; box-shadow: none; }
+.student-learning-page .chapter-card strong { font-size: 15px; font-weight: 400; }
+.student-learning-page .chapter-card small { color: #444; font-size: 11px; }
+
+.student-learning-page .lesson-shell { direction: ltr; }
+.student-learning-page .lesson-toolbar { margin-bottom: 20px; }
+.student-learning-page .lesson-back { font: 13px Arial, sans-serif; color: #111; }
+.student-learning-page .lesson-level { font: 12px Arial, sans-serif; }
+.student-learning-page .lesson-heading {
+  width: 72%; margin: 0 auto; padding: 3px 14px;
+  border: 1px solid #999; border-radius: 11px; background: #f3f3a5;
+  box-shadow: none;
+}
+.student-learning-page .lesson-heading .lesson-kicker,
+.student-learning-page .lesson-heading p { display: none; }
+.student-learning-page .lesson-heading h1 { font: 700 22px Arial, sans-serif; }
+.student-learning-page .lesson-progress { margin: 20px 0 28px; }
+.student-learning-page .lesson-stat { min-width: 120px; border-color: #999; border-radius: 7px; box-shadow: none; }
+
+.student-learning-page .exercise-sheet { border: 0; border-radius: 0; box-shadow: none; background: #fff; overflow: visible; }
+.student-learning-page .exercise-sheet::before { display: none; }
+.student-learning-page .exercise-sheet-head { padding: 0 4px 13px; border-bottom: 1px solid #bbb; }
+.student-learning-page .exercise-sheet-head .sheet-rule { display: none; }
+.student-learning-page .exercise-sheet-head h2 { font: 700 20px Arial, sans-serif; }
+.student-learning-page .exercise-sheet-head p { font: italic 17px Georgia, serif; color: #222; }
+.student-learning-page .exercise-line {
+  min-height: 92px; grid-template-columns: 32px 1fr 112px; gap: 9px;
+  padding: 12px 4px; border-top: 0; border-bottom: 1px solid #bbb; background: #fff;
+}
+.student-learning-page .exercise-line:hover { background: #fff; }
+.student-learning-page .exercise-index { background: transparent; color: #111; font: 16px Georgia, serif; }
+.student-learning-page .exercise-label { display: none; }
+.student-learning-page .exercise-copy p { font: italic 19px/1.35 Georgia, serif; color: #111; }
+.student-learning-page .exercise-start {
+  padding: 10px 8px; text-align: center; border: 1px solid #888;
+  border-radius: 8px; background: #e8e8e8; color: #111; font: 14px Arial, sans-serif;
+}
+.student-learning-page .exercise-start:hover { background: #d7d7d7; color: #111; }
+
+.student-learning-page .take-shell { max-width: 640px; }
+.student-learning-page .math-paper { border: 0; box-shadow: none; padding: 10px 4px; }
+.student-learning-page .math-paper::before { display: none; }
+.student-learning-page .math-paper h1 {
+  padding: 3px 10px; border: 1px solid #999; border-radius: 11px;
+  background: #f3f3a5; text-align: center; font: 700 21px Arial, sans-serif;
+}
+.student-learning-page .math-question { font: italic 20px/1.5 Georgia, serif; }
+.student-learning-page .answer-grid { gap: 8px; }
+.student-learning-page .answer-choice { border-color: #999; border-radius: 7px; background: #eee; font-family: Georgia, serif; }
+.student-learning-page .answer-choice:hover { background: #ddd; }
+.student-learning-page .math-submit { border: 1px solid #777; background: #ddd; color: #111; }
+.student-learning-page .math-submit:hover { background: #ccc; }
+
+@media (max-width: 800px) {
+  .cmath-shell { display: block; }
+  .cmath-sidebar { min-height: 0; padding: 5px; border-right: 0; border-bottom: 1px solid #aaa; }
+  .cmath-ad-space, .cmath-calculator { display: none; }
+  .cmath-user-box { grid-template-columns: 1fr 1fr; }
+  .cmath-side-menu { float: none; width: auto; grid-template-columns: repeat(3, 1fr); }
+  .cmath-logo { font-size: 26px; }
+  .cmath-levels { overflow-x: auto; justify-content: flex-start; }
+  .cmath-levels span { min-width: 52px; }
+  .student-learning-page .cmath-main > .container { padding-top: 18px; }
+  .student-learning-page #chaptersView > h2,
+  .student-learning-page .lesson-heading { width: 100%; }
+  .student-learning-page .lesson-progress { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .student-learning-page .exercise-line { grid-template-columns: 25px 1fr; }
+  .student-learning-page .exercise-start, .student-learning-page .exercise-done { grid-column: 2; justify-self: start; }
+}
+
 @media (max-width: 1024px) {
   .container { max-width: 100%; }
 }
@@ -496,3 +623,238 @@ tr:last-child td { border-bottom: none; }
 .pr-rtl { padding-inline-end: 1rem; }
 .ml-rtl { margin-inline-start: 1rem; }
 .mr-rtl { margin-inline-end: 1rem; }
+.chapter-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.chapter-card {
+  width: 100%;
+  border: 1px solid #dce5df;
+  border-radius: 16px;
+  background: #fff;
+  padding: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: right;
+  color: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(24, 74, 55, 0.07);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.chapter-card:hover,
+.chapter-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #2f7d5b;
+  box-shadow: 0 12px 30px rgba(24, 74, 55, 0.13);
+}
+
+.chapter-number {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e7f4ed;
+  color: #216345;
+  font-weight: 800;
+}
+
+.chapter-copy { display: grid; gap: .35rem; flex: 1; }
+.chapter-copy strong { font-size: 1.05rem; }
+.chapter-copy small { color: #65726b; line-height: 1.5; }
+.chapter-progress { color: #216345; font-size: .82rem; font-weight: 700; }
+.chapter-arrow { color: #2f7d5b; font-size: 1.3rem; }
+
+/* Student lesson experience — clean worksheet-inspired presentation */
+.student-learning-page {
+  background:
+    linear-gradient(rgba(255,255,255,.72), rgba(255,255,255,.72)),
+    repeating-linear-gradient(0deg, transparent 0 31px, #dfe9e2 32px);
+}
+
+.student-learning-page .container { max-width: 920px; padding-top: 2rem; }
+.lesson-shell, .take-shell { direction: ltr; }
+
+.lesson-toolbar, .take-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.lesson-back {
+  border: 0;
+  background: transparent;
+  color: #315d49;
+  font: 700 .9rem 'Cairo', sans-serif;
+  cursor: pointer;
+  padding: .45rem 0;
+}
+.lesson-back:hover { color: #163f2c; text-decoration: underline; }
+.lesson-level {
+  color: #5f6d65;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.lesson-heading {
+  background: #f5f5a6;
+  border: 1px solid #b8b77b;
+  border-radius: 14px;
+  padding: 1.4rem 1.6rem;
+  text-align: center;
+  box-shadow: 0 6px 0 rgba(43, 76, 58, .07);
+}
+.lesson-kicker {
+  display: block;
+  color: #49705d;
+  font: 700 .75rem 'Cairo', sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: .25rem;
+}
+.lesson-heading h1, .math-paper h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  margin: 0;
+  color: #16231c;
+}
+.lesson-heading p {
+  margin: .35rem auto 0;
+  max-width: 620px;
+  color: #46524b;
+  font-size: .92rem;
+}
+
+.lesson-progress {
+  display: flex;
+  justify-content: center;
+  gap: .65rem;
+  margin: 1.2rem 0;
+}
+.lesson-stat {
+  min-width: 130px;
+  padding: .65rem 1rem;
+  border: 1px solid #cfd8d1;
+  border-radius: 999px;
+  background: rgba(255,255,255,.9);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: .45rem;
+}
+.lesson-stat .value { font: 700 1.15rem Georgia, serif; color: #1f5c3d; }
+.lesson-stat .label { font-size: .75rem; color: #657169; }
+.lesson-stat-done { background: #e9f6ed; border-color: #b8d8c3; }
+
+.exercise-sheet, .math-paper {
+  position: relative;
+  background: #fffef9;
+  border: 1px solid #d7d5c9;
+  border-radius: 6px;
+  box-shadow: 0 14px 35px rgba(44, 55, 48, .12);
+  overflow: hidden;
+}
+.exercise-sheet::before, .math-paper::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 46px;
+  width: 1px;
+  background: #efb8b8;
+  pointer-events: none;
+}
+.exercise-sheet-head { padding: 1.7rem 2rem 1.2rem 4.5rem; }
+.exercise-sheet-head h2 {
+  font: 700 1.55rem Georgia, 'Times New Roman', serif;
+  margin: 0;
+}
+.exercise-sheet-head p {
+  margin: .35rem 0 0;
+  color: #606860;
+  font: italic 1rem Georgia, 'Times New Roman', serif;
+}
+.sheet-rule { display: block; width: 54px; height: 4px; background: #2f7653; margin-bottom: .65rem; }
+
+.exercise-line {
+  min-height: 108px;
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.5rem 1.1rem .7rem;
+  border-top: 1px solid #e5e2d7;
+}
+.exercise-line:hover { background: #fbfcf7; }
+.exercise-index {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #f0f1df; color: #3e5848;
+  font: 700 1rem Georgia, serif;
+}
+.exercise-copy { min-width: 0; }
+.exercise-label { color: #68736c; font: 700 .73rem 'Cairo', sans-serif; text-transform: uppercase; }
+.exercise-copy p {
+  margin: .2rem 0 0;
+  color: #171c19;
+  font: italic clamp(1.05rem, 2.5vw, 1.3rem)/1.55 Georgia, 'Times New Roman', serif;
+}
+.exercise-start {
+  padding: .65rem .9rem;
+  border: 1px solid #346d50;
+  border-radius: 8px;
+  color: #24543c;
+  font-size: .82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.exercise-start:hover { background: #225c3e; color: #fff; text-decoration: none; }
+.exercise-done { color: #257044; font-size: .82rem; font-weight: 700; white-space: nowrap; }
+.exercise-line.is-complete { background: #fbfdf9; }
+
+.take-shell { max-width: 760px; margin: 0 auto; }
+.math-paper { padding: clamp(1.5rem, 5vw, 3.4rem); }
+.math-paper::before { left: 34px; }
+.math-question {
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 0;
+  border-block: 1px solid #e2dfd2;
+  font: italic clamp(1.25rem, 4vw, 1.75rem)/1.6 Georgia, 'Times New Roman', serif;
+  color: #171c19;
+}
+.answer-instruction { color: #536159; font-size: .9rem; }
+.answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin: 1rem 0 1.5rem; }
+.answer-choice {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .9rem 1rem;
+  border: 1px solid #d8d8cc;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font: 1.05rem Georgia, 'Times New Roman', serif;
+  transition: border-color .15s, background .15s;
+}
+.answer-choice:hover { border-color: #5d8b70; background: #f7fbf7; }
+.answer-choice:has(input:checked) { border-color: #246341; background: #eaf5ed; box-shadow: 0 0 0 2px #cce3d3; }
+.answer-choice input { accent-color: #246341; }
+.answer-letter { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #eef1eb; font-weight: 700; }
+.math-submit { max-width: 320px; margin: 0 auto; display: block; }
+
+@media (max-width: 640px) {
+  .student-learning-page .container { padding-top: 1rem; }
+  .lesson-progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+  .lesson-stat { min-width: 0; padding: .55rem .35rem; display: grid; gap: 0; text-align: center; border-radius: 10px; }
+  .exercise-sheet::before, .math-paper::before { display: none; }
+  .exercise-sheet-head { padding: 1.35rem 1rem; }
+  .exercise-line { grid-template-columns: 32px 1fr; padding: 1rem; gap: .65rem; }
+  .exercise-start, .exercise-done { grid-column: 2; justify-self: start; }
+  .answer-grid { grid-template-columns: 1fr; }
+  .take-topline { align-items: flex-start; }
+}

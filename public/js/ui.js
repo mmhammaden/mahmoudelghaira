@@ -102,20 +102,16 @@ function isCurrentPage(path) {
 // Require authentication — redirects to login if not authenticated
 // Returns the profile object or null
 async function requireAuth(allowAdmin = false) {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-  if (sessionError || !session) {
+  if (!localStorage.getItem('ghaira_session')) {
     window.location.href = '/login.html';
     return null;
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single();
-
-  if (profileError || !profile) {
+  let profile;
+  try {
+    profile = await apiGet('/api/profile/me');
+  } catch (err) {
+    localStorage.removeItem('ghaira_session');
     window.location.href = '/login.html';
     return null;
   }
@@ -130,7 +126,8 @@ async function requireAuth(allowAdmin = false) {
 
 // Sign out the user
 async function signOut() {
-  await supabase.auth.signOut();
+  try { await apiPost('/api/auth/logout', {}); } catch (err) { /* Clear local state regardless. */ }
+  localStorage.removeItem('ghaira_session');
   window.location.href = '/login.html';
 }
 
@@ -147,14 +144,11 @@ function statusBadge(completed) {
   return '<span class="status-badge status-pending">غير مكتمل</span>';
 }
 
-// Translate common Supabase/auth errors to friendly Arabic
+// Translate common authentication errors to friendly Arabic
 function translateError(errorMessage) {
   const arabicMessages = {
-    'Invalid login credentials': 'رقم الهاتف أو كلمة المرور غير صحيحة.',
-    'Email not confirmed': 'الحساب غير مؤكد.',
-    'User already registered': 'هذا الرقم مسجل بالفعل.',
+    'Invalid phone number or password': 'رقم الهاتف أو كلمة المرور غير صحيحة.',
     'Phone number already exists': 'هذا الرقم مسجل بالفعل.',
-    'Unable to validate email address: invalid format': 'صيغة غير صالحة.',
     'Network error': 'خطأ في الاتصال بالشبكة. يرجى المحاولة لاحقًا.',
     'session not found': 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',
   };

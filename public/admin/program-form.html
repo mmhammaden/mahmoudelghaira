@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نموذج تمرين – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/config.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
 </head>
 <body>
 <nav class="navbar">
@@ -66,6 +65,11 @@
           <option value="">اختر صفاً</option>
         </select>
 
+        <label for="chapter_id">الفصل</label>
+        <select id="chapter_id" name="chapter_id" required disabled>
+          <option value="">اختر الصف أولاً</option>
+        </select>
+
         <a href="programs.html" class="btn btn-ghost">إلغاء</a>
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">إضافة تمرين</button>
       </form>
@@ -80,6 +84,7 @@
 <script>
 let profile, editId = null;
 const classSelect = document.getElementById('class_id');
+const chapterSelect = document.getElementById('chapter_id');
 const form = document.getElementById('form');
 const submitBtn = document.getElementById('submitBtn');
 const pageTitle = document.getElementById('pageTitle');
@@ -102,23 +107,52 @@ async function init() {
 }
 
 async function loadClasses() {
-  const { data } = await supabase.from('classes').select('*').order('name');
-  classSelect.innerHTML = '<option value="">اختر صفاً</option>' +
-    (data || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
+  try {
+    const data = await apiGet('/api/classes');
+    classSelect.innerHTML = '<option value="">اختر صفاً</option>' +
+      (data.classes || []).map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
+  } catch (err) {
+    showAlert(err.message, 'error');
+  }
 }
 
 async function loadExercise(id) {
-  const { data } = await supabase.from('exercises').select('*').eq('id', id).single();
-  if (!data) return;
-  document.getElementById('title').value = data.title;
-  document.getElementById('question').value = data.question;
-  form.elements['option_a'].value = data.option_a || '';
-  form.elements['option_b'].value = data.option_b || '';
-  form.elements['option_c'].value = data.option_c || '';
-  form.elements['option_d'].value = data.option_d || '';
-  form.elements['correct_answer'].value = data.correct_answer;
-  classSelect.value = data.class_id;
+  try {
+    const data = await apiGet('/api/admin/exercises/' + id);
+    if (!data) return;
+    document.getElementById('title').value = data.title;
+    document.getElementById('question').value = data.question;
+    form.elements['option_a'].value = data.option_a || '';
+    form.elements['option_b'].value = data.option_b || '';
+    form.elements['option_c'].value = data.option_c || '';
+    form.elements['option_d'].value = data.option_d || '';
+    form.elements['correct_answer'].value = data.correct_answer;
+    classSelect.value = data.class_id;
+    await loadChapters(data.class_id);
+    chapterSelect.value = data.chapter_id || '';
+  } catch (err) {
+    showAlert(err.message, 'error');
+  }
 }
+
+async function loadChapters(classId) {
+  if (!classId) {
+    chapterSelect.disabled = true;
+    chapterSelect.innerHTML = '<option value="">اختر الصف أولاً</option>';
+    return;
+  }
+  try {
+    const data = await apiGet('/api/chapters?class_id=' + encodeURIComponent(classId));
+    const chapters = data.chapters || [];
+    chapterSelect.disabled = false;
+    chapterSelect.innerHTML = '<option value="">اختر فصلاً</option>' +
+      chapters.map(ch => '<option value="' + ch.id + '">' + escapeHtml(ch.title) + '</option>').join('');
+  } catch (err) {
+    showAlert(err.message, 'error');
+  }
+}
+
+classSelect.addEventListener('change', () => loadChapters(classSelect.value));
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -132,10 +166,11 @@ form.addEventListener('submit', async (e) => {
     option_c: form.elements['option_c'].value,
     option_d: form.elements['option_d'].value,
     correct_answer: form.elements['correct_answer'].value,
-    class_id: parseInt(classSelect.value)
+    class_id: parseInt(classSelect.value),
+    chapter_id: parseInt(chapterSelect.value)
   };
 
-  if (!payload.title || !payload.question || !payload.class_id) {
+  if (!payload.title || !payload.question || !payload.class_id || !payload.chapter_id) {
     box.innerHTML = '<div class="alert alert-error" role="alert">الرجاء ملء جميع الحقول الإجبارية.</div>';
     return;
   }
@@ -144,25 +179,19 @@ form.addEventListener('submit', async (e) => {
   btn.disabled = true;
   btn.textContent = 'جارٍ الحفظ...';
 
-  if (editId) {
-    const { error } = await supabase.from('exercises').update(payload).eq('id', editId);
-    if (error) {
-      box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
-      btn.disabled = false;
-      btn.textContent = 'تحديث التمرين';
-      return;
+  try {
+    if (editId) {
+      await apiPut('/api/admin/exercises/' + editId, payload);
+    } else {
+      await apiPost('/api/admin/exercises', payload);
     }
-  } else {
-    const { error } = await supabase.from('exercises').insert(payload);
-    if (error) {
-      box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(translateError(error.message)) + '</div>';
-      btn.disabled = false;
-      btn.textContent = 'إضافة تمرين';
-      return;
-    }
+    box.innerHTML = '<div class="alert alert-success" role="alert">تم الحفظ بنجاح.</div>';
+    setTimeout(() => { window.location.href = 'programs.html'; }, 1000);
+  } catch (err) {
+    box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(err.message) + '</div>';
+    btn.disabled = false;
+    btn.textContent = editId ? 'تحديث التمرين' : 'إضافة تمرين';
   }
-  box.innerHTML = '<div class="alert alert-success" role="alert">تم الحفظ بنجاح.</div>';
-  setTimeout(() => { window.location.href = 'programs.html'; }, 1000);
 });
 
 init();

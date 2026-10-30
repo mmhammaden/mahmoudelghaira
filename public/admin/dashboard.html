@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة التحكم للمدير – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/config.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
 </head>
 <body>
 <nav class="navbar">
@@ -65,41 +64,45 @@ async function init() {
 }
 
 async function loadStats() {
-  const [sRes, cRes, eRes, rRes] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
-    supabase.from('classes').select('*', { count: 'exact', head: true }),
-    supabase.from('exercises').select('*', { count: 'exact', head: true }),
-    supabase.from('results').select('*', { count: 'exact', head: true })
-  ]);
+  try {
+    const [uRes, cRes, eRes, rRes] = await Promise.all([
+      apiGet('/api/admin/users'),
+      apiGet('/api/classes'),
+      apiGet('/api/admin/exercises'),
+      apiGet('/api/admin/results')
+    ]);
 
-  document.querySelectorAll('.stat .value')[0].textContent = sRes.count ?? 0;
-  document.querySelectorAll('.stat .value')[1].textContent = cRes.count ?? 0;
-  document.querySelectorAll('.stat .value')[2].textContent = eRes.count ?? 0;
-  document.querySelectorAll('.stat .value')[3].textContent = rRes.count ?? 0;
+    const users = uRes.users || [];
+    const studentCount = users.filter(u => u.role === 'student').length;
+
+    document.querySelectorAll('.stat .value')[0].textContent = studentCount;
+    document.querySelectorAll('.stat .value')[1].textContent = (cRes.classes || []).length;
+    document.querySelectorAll('.stat .value')[2].textContent = (eRes.exercises || []).length;
+    document.querySelectorAll('.stat .value')[3].textContent = (rRes.results || []).length;
+  } catch (err) {
+    showAlert(err.message, 'error');
+  }
 }
 
 async function loadRecent() {
-  const { data, error } = await supabase
-    .from('results')
-    .select(`exercise_id, submitted_at, score, total,
-      profiles ( name, class_id, classes ( name ) )
-    `)
-    .order('submitted_at', { ascending: false })
-    .limit(10);
+  try {
+    const data = await apiGet('/api/admin/results');
+    const results = data.results || [];
 
-  if (error) { showAlert(translateError(error.message), 'error'); return; }
-
-  const tbody = document.querySelector('#recentTable tbody');
-  tbody.innerHTML = (data || []).map(r => {
-    const cls = escapeHtml(r.profiles?.classes?.name) || '-';
-    return `<tr>
-      <td>${escapeHtml(r.profiles?.name)}</td>
-      <td>${cls}</td>
-      <td>التمرين #${r.exercise_id}</td>
-      <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
-      <td>${escapeHtml(formatDate(r.submitted_at))}</td>
-    </tr>`;
-  }).join('');
+    const tbody = document.querySelector('#recentTable tbody');
+    tbody.innerHTML = (results || []).slice(0, 10).map(r => {
+      const cls = escapeHtml(r.class_name) || '-';
+      return `<tr>
+        <td>${escapeHtml(r.student_name)}</td>
+        <td>${cls}</td>
+        <td>التمرين #${r.exercise_id}</td>
+        <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
+        <td>${escapeHtml(formatDate(r.submitted_at))}</td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    showAlert(err.message, 'error');
+  }
 }
 
 init();

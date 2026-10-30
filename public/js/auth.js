@@ -5,53 +5,40 @@
 // Check auth on every protected page
 // Returns the profile object or null (redirects to login)
 async function requireAuth(allowAdmin = false) {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-  if (sessionError || !session) {
+  if (!localStorage.getItem('ghaira_session')) {
     window.location.href = '/login.html';
     return null;
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single();
-
-  if (profileError || !profile) {
+  try {
+    const profile = await apiGet('/api/profile/me');
+    if (allowAdmin && profile.role !== 'admin') {
+      window.location.href = '/dashboard.html';
+      return null;
+    }
+    return profile;
+  } catch (err) {
+    localStorage.removeItem('ghaira_session');
     window.location.href = '/login.html';
     return null;
   }
-
-  if (allowAdmin && profile.role !== 'admin') {
-    window.location.href = '/dashboard.html';
-    return null;
-  }
-
-  return profile;
 }
 
 // Build navbar with logout — uses ui.js buildNavbar
 async function buildNavbar() {
-  const { data: { session } } = await supabase.auth.getSession();
   const container = document.getElementById('navLinks');
-  if (!container || !session) return;
+  if (!container || !localStorage.getItem('ghaira_session')) return;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single();
-
-  if (!profile) {
+  try {
+    const profile = await apiGet('/api/profile/me');
+    const links = await buildNavbarLinks(profile);
+    container.innerHTML = links;
+    return profile;
+  } catch (err) {
+    localStorage.removeItem('ghaira_session');
     window.location.href = '/login.html';
     return null;
   }
-
-  // Delegate to ui.js buildNavbar for consistent markup
-  const links = await buildNavbarLinks(profile);
-  container.innerHTML = links;
-  return profile;
 }
 
 // Build navigation links HTML based on role
@@ -78,6 +65,7 @@ async function buildNavbarLinks(profile) {
 
 // Sign out the user
 async function signOut() {
-  await supabase.auth.signOut();
+  try { await apiPost('/api/auth/logout', {}); } catch (err) { /* Clear local state regardless. */ }
+  localStorage.removeItem('ghaira_session');
   window.location.href = '/login.html';
 }

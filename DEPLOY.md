@@ -1,68 +1,36 @@
 # Deployment Guide — exercice7.web.app
 
-This document describes how to deploy the Ghaira frontend to Firebase Hosting at `https://exercice7.web.app`.
+## Components
 
-## 1. What gets deployed
+- `public/` is deployed to Firebase Hosting.
+- `src/worker.py` is deployed as the Cloudflare Worker `ghaira-api`.
+- `ghaira-db` is the D1 database bound to the Worker as `ghaira_db`.
 
-Only the **`/public/`** directory is deployed to Firebase Hosting. It contains static HTML + vanilla JS that talks directly to Supabase from the browser.
-
-The Flask backend (`app.py`, `templates/`) is **not** deployed to Firebase Hosting — Firebase Hosting serves static files only.
-
-## 2. Prerequisites
-
-- Firebase CLI installed (`npm install -g firebase-tools`)
-- Logged into Firebase (`firebase login`)
-- The Firebase project `mahmoudelghaira` is the active/default project
-
-## 3. Project / Hosting details
-
-| Item | Value |
-|------|-------|
-| Firebase project ID | `mahmoudelghaira` |
-| Hosting target name | `exercice7` |
-| Site instance | `exercice7` |
-| Live URL | `https://exercice7.web.app` |
-| Local deploy folder | `/home/kali/Desktop/ghaira/public` |
-| Supabase project (frontend backend) | `https://vjzogmivmohrygundsgk.supabase.co` |
-
-## 4. Deployment command
-
-From the project root:
+## Commands
 
 ```bash
-cd /home/kali/Desktop/ghaira
+npx wrangler d1 execute ghaira-db --remote --file cloudflare/reset-phone-only.sql
+npx wrangler deploy
 firebase deploy --only hosting:exercice7 --project mahmoudelghaira
 ```
 
-## 5. First-time setup (if target is not configured)
+## Verification
 
-If the hosting target `exercice7` is not linked yet:
+Verify the Worker health endpoint first, then register and log in through
+`https://exercice7.web.app` using an eight-digit phone number beginning with
+2, 3, or 4.
+
+The authenticated API routes used by the frontend are:
+
+- `GET /api/profile/me`
+- `GET /api/exercises` (returns exercises for the student's class)
+- `POST /api/exercises/<id>/submit` with `{ "answer": "A" }`
+- `POST /api/auth/logout`
+
+Create a production administrator with:
 
 ```bash
-cd /home/kali/Desktop/ghaira
-firebase target:apply hosting exercice7 exercice7
+python3 backend/create_admin.py
 ```
 
-This writes the target mapping into `.firebaserc`.
-
-## 6. Verify deployment
-
-After deploy completes, check the live site:
-
-```bash
-curl -I https://exercice7.web.app
-```
-
-Expected: the site redirects `/` → `login.html` and shows the Ghaira login page.
-
-## 7. Files involved
-
-- `firebase.json` — hosting config (`public` dir, target `exercice7`, rewrite `**` → `/index.html`)
-- `.firebaserc` — project + target mapping for `mahmoudelghaira`
-- `public/` — all static files deployed to Firebase Hosting
-
-## 8. Notes
-
-- The frontend uses Supabase Auth (phone/password) and the Supabase anon key from `public/js/config.js`.
-- No server-side backend runs on Firebase; the frontend calls Supabase directly.
-- If you modify files in `public/`, re-run the deploy command above to push changes.
+The script writes to the remote `ghaira-db` D1 database through Wrangler.

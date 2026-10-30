@@ -5,16 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>تماريني – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/config.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
 </head>
-<body>
+<body class="student-learning-page">
 <nav class="navbar">
   <a href="../index.html" class="brand">ثانوية الغايرة</a>
   <div class="nav-links" id="navLinks"></div>
 </nav>
+
+<div class="cmath-shell">
+<aside class="cmath-sidebar">
+  <div class="cmath-ad-space" aria-hidden="true"></div>
+  <div class="cmath-user-box">
+    <div class="cmath-user-name" id="sideStudentName">Élève</div>
+    <div class="cmath-score">Score : <strong id="sideScore">0</strong></div>
+  </div>
+  <nav class="cmath-side-menu" aria-label="Menu élève">
+    <a href="/student/exercises.html" class="active">Exercices</a>
+    <a href="/student/results.html">Bilan</a>
+    <button type="button" onclick="signOut()">Déconnexion</button>
+  </nav>
+  <div class="cmath-calculator" aria-hidden="true">
+    <div class="cmath-screen">0</div>
+    <div class="cmath-keys"><span>√</span><span>^</span><span>←</span><span>CE</span><span>+</span><span>7</span><span>8</span><span>9</span><span>−</span><span>4</span><span>5</span><span>6</span><span>×</span><span>1</span><span>2</span><span>3</span><span>÷</span><span>0</span><span>±</span><span>=</span></div>
+  </div>
+</aside>
+
+<main class="cmath-main">
+  <header class="cmath-header">
+    <div class="cmath-logo" aria-label="Apprendre les maths">
+      <span class="c-blue">A</span><span class="c-red">p</span><span class="c-orange">p</span><span class="c-green">r</span><span class="c-blue">e</span><span class="c-orange">n</span><span class="c-green">d</span><span class="c-red">r</span><span class="c-blue">e</span>
+      <b> les maths</b><span class="c-green">!</span>
+    </div>
+    <div class="cmath-levels" aria-label="Niveaux">
+      <span>6ème</span><span>5ème</span><span>4ème</span><span>3ème</span><span class="active">2AS</span><span>3AS</span><span>4AS</span><span>5D</span><span>6A</span>
+    </div>
+  </header>
 
 <div class="container">
   <div id="alert-box"></div>
@@ -25,26 +53,50 @@
   </div>
 
   <div id="exercisesContent" style="display:none;">
-    <h2>تماريني</h2>
-    <p class="small-note">قم بأداء التمارين أدناه. يتم حفظ النتائج تلقائياً.</p>
+    <div id="chaptersView">
+      <h2>الفصول الدراسية</h2>
+      <p class="small-note">اختر فصلاً لعرض تمارينه.</p>
+      <div id="chaptersList" class="chapter-grid"></div>
+    </div>
 
-    <div class="stat-row mb-2">
-      <div class="stat">
+    <div id="chapterExercisesView" class="lesson-shell" style="display:none;">
+      <div class="lesson-toolbar">
+        <button type="button" class="lesson-back" id="backToChapters">← جميع الفصول</button>
+        <span class="lesson-level">2AS · Mathématiques</span>
+      </div>
+      <header class="lesson-heading">
+        <span class="lesson-kicker">Chapitre</span>
+        <h1 id="chapterTitle">تماريني</h1>
+        <p id="chapterDescription">قم بأداء التمارين أدناه. يتم حفظ النتائج تلقائياً.</p>
+      </header>
+
+    <div class="lesson-progress" aria-label="تقدم الفصل">
+      <div class="lesson-stat">
         <div class="value" id="statTotal">0</div>
         <div class="label">إجمالي التمارين</div>
       </div>
-      <div class="stat">
+      <div class="lesson-stat lesson-stat-done">
         <div class="value" id="statCompleted">0</div>
         <div class="label">مكتمل</div>
       </div>
-      <div class="stat">
+      <div class="lesson-stat">
         <div class="value" id="statRemaining">0</div>
         <div class="label">باقٍ</div>
       </div>
     </div>
 
-    <div id="exercisesList"></div>
+      <section class="exercise-sheet" aria-labelledby="exerciseSheetTitle">
+        <div class="exercise-sheet-head">
+          <span class="sheet-rule"></span>
+          <h2 id="exerciseSheetTitle">Exercices</h2>
+          <p>Choisis un exercice, effectue ton calcul puis sélectionne la bonne réponse.</p>
+        </div>
+        <div id="exercisesList" class="exercise-list"></div>
+      </section>
+    </div>
   </div>
+</div>
+</main>
 </div>
 
 <footer class="footer">
@@ -53,36 +105,74 @@
 
 <script>
 let profile;
+let chapters = [];
+const initialChapterId = new URLSearchParams(window.location.search).get('chapter_id');
 
 async function init() {
   profile = await requireAuth();
   if (!profile) return;
+  document.getElementById('sideStudentName').textContent = profile.name || 'Élève';
   await buildNavbar();
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('exercisesContent').style.display = 'block';
-  await loadExercises();
+  await loadChapters();
+  if (initialChapterId) await showChapter(Number(initialChapterId));
 }
 
-async function loadExercises() {
-  const container = document.getElementById('exercisesList');
-
-  const { data: exercises, error } = await supabase
-    .from('exercises')
-    .select('*, classes ( name )')
-    .eq('class_id', profile.class_id)
-    .order('id', { ascending: false });
-
-  if (error) {
-    showAlert(translateError(error.message), 'error');
+async function loadChapters() {
+  try {
+    const data = await apiGet('/api/chapters');
+    chapters = data.chapters || [];
+  } catch (err) {
+    showAlert(err.message, 'error');
     return;
   }
 
-  const { data: results } = await supabase
-    .from('results')
-    .select('exercise_id')
-    .eq('user_id', profile.id);
+  if (!chapters.length) {
+    showEmpty('chaptersList', 'لا توجد فصول متاحة لصفك بعد.', 'ستظهر الفصول هنا عندما يضيفها المعلم.');
+    return;
+  }
+
+  document.getElementById('chaptersList').innerHTML = chapters.map((chapter, index) => `
+    <button type="button" class="chapter-card" onclick="showChapter(${chapter.id})">
+      <strong>${index + 1}. ${escapeHtml(chapter.title)}</strong>
+      <small>${escapeHtml(chapter.exercise_count)} exercices</small>
+    </button>
+  `).join('');
+}
+
+async function showChapter(chapterId) {
+  const chapter = chapters.find(item => Number(item.id) === Number(chapterId));
+  if (!chapter) return;
+  document.getElementById('chaptersView').style.display = 'none';
+  document.getElementById('chapterExercisesView').style.display = 'block';
+  document.getElementById('chapterTitle').textContent = chapter.title;
+  document.getElementById('chapterDescription').textContent = chapter.description;
+  history.replaceState(null, '', '/student/exercises.html?chapter_id=' + chapter.id);
+  await loadExercises(chapter.id);
+}
+
+async function loadExercises(chapterId) {
+  const container = document.getElementById('exercisesList');
+
+  try {
+    var exData = await apiGet('/api/exercises?chapter_id=' + encodeURIComponent(chapterId));
+    var exercises = exData.exercises || [];
+  } catch (err) {
+    showAlert(err.message, 'error');
+    return;
+  }
+
+  try {
+    var resData = await apiGet('/api/results');
+    var results = resData.results || [];
+  } catch (err) {
+    showAlert(err.message, 'error');
+    return;
+  }
   const doneIds = new Set((results || []).map(r => r.exercise_id));
+  document.getElementById('sideScore').textContent = (results || []).reduce((sum, item) => sum + Number(item.score || 0), 0);
 
   // Update stats
   const total = (exercises || []).length;
@@ -96,24 +186,26 @@ async function loadExercises() {
     return;
   }
 
-  container.innerHTML = (exercises || []).map(e => `
-    <div class="exercise">
-      <div style="display:flex; justify-content:space-between; align-items:start; gap:1rem;">
-        <div>
-          <h3>${escapeHtml(e.title)}</h3>
-          <p>${escapeHtml(e.question)}</p>
-          <p class="small-note">الصف: ${escapeHtml(e.classes?.name || '-')}</p>
-        </div>
-        <div style="text-align:left;">
-          ${doneIds.has(e.id)
-            ? statusBadge(true)
-            : `<a href="/student/take.html?id=${e.id}" class="btn btn-primary btn-sm">ابدأ التمرين</a>`}
-        </div>
+  container.innerHTML = (exercises || []).map((e, index) => `
+    <article class="exercise-line ${doneIds.has(e.id) ? 'is-complete' : ''}">
+      <span class="exercise-index">${index + 1}</span>
+      <div class="exercise-copy" dir="ltr">
+        <span class="exercise-label">${escapeHtml(e.title)}</span>
+        <p>${escapeHtml(e.question)}</p>
       </div>
-      ${doneIds.has(e.id) ? '<a href="/student/take.html?id=' + e.id + '" class="btn btn-ghost btn-sm mt-1">إعادة التمرين</a>' : ''}
-    </div>
+      ${doneIds.has(e.id)
+        ? '<span class="exercise-done" aria-label="Exercice terminé">✓ Terminé</span>'
+        : `<a href="/student/take.html?id=${e.id}" class="exercise-start">Commencer <span>→</span></a>`}
+    </article>
   `).join('');
 }
+
+document.getElementById('backToChapters').addEventListener('click', async () => {
+  document.getElementById('chapterExercisesView').style.display = 'none';
+  document.getElementById('chaptersView').style.display = 'block';
+  history.replaceState(null, '', '/student/exercises.html');
+  await loadChapters();
+});
 
 init();
 </script>
