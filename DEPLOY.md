@@ -3,22 +3,29 @@
 ## Components
 
 - `public/` is deployed to Firebase Hosting.
-- `src/worker.py` is deployed as the Cloudflare Worker `ghaira-api`.
-- `ghaira-db` is the D1 database bound to the Worker as `ghaira_db`.
+- The Flask API (`app.py`) connects to the Neon PostgreSQL database.
+- Neon stores classes, users, profiles, sessions, exercises, and results.
 
 ## Commands
 
 ```bash
-npx wrangler d1 execute ghaira-db --remote --file cloudflare/reset-phone-only.sql
-npx wrangler deploy
+# 1. Apply the Neon database schema
+psql "$DATABASE_URL" -f backend/schema.sql
+
+# 2. Deploy Firebase Hosting
 firebase deploy --only hosting:exercice7 --project mahmoudelghaira
+
+# 3. Deploy the Flask API to Google Cloud Run (connects to Neon)
+gcloud run deploy ghaira-api \
+  --source /home/kali/Desktop/ghaira/backend \
+  --region europe-west1 \
+  --allow-unauthenticated
 ```
 
 ## Verification
 
-Verify the Worker health endpoint first, then register and log in through
-`https://exercice7.web.app` using an eight-digit phone number beginning with
-2, 3, or 4.
+Register and log in through `https://exercice7.web.app` using an eight-digit
+phone number beginning with 2, 3, or 4.
 
 The authenticated API routes used by the frontend are:
 
@@ -27,10 +34,6 @@ The authenticated API routes used by the frontend are:
 - `POST /api/exercises/<id>/submit` with `{ "answer": "A" }`
 - `POST /api/auth/logout`
 
-Create a production administrator with:
-
-```bash
-python3 backend/create_admin.py
-```
-
-The script writes to the remote `ghaira-db` D1 database through Wrangler.
+Create a production administrator by inserting a row directly into the Neon
+`profiles` and `users` tables (phone must be 8 digits starting with 2, 3, or 4;
+passwords are stored as PBKDF2-SHA256 hashes).

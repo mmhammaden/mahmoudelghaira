@@ -1,8 +1,10 @@
 // ============================================================
-// API helper — talks to the Cloudflare Worker.
+// API helper — talks to the Flask API (Google Cloud Run + Neon).
 // ============================================================
 
-const API_BASE_URL = 'https://ghaira-api.ghaira.workers.dev';
+// Set this to your Cloud Run service URL, e.g.
+// 'https://ghaira-api-XXXX.run.app'. Leave empty to use the same origin.
+const API_BASE_URL = '';
 
 async function apiRequest(path, options = {}) {
   const token = localStorage.getItem('ghaira_session');
