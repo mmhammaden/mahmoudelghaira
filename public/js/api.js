@@ -17,10 +17,19 @@ async function apiRequest(path, options = {}) {
   };
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
-  const body = await response.json().catch(() => null);
+  let body;
+  try {
+    body = await response.json();
+  } catch (_) {
+    body = null;
+  }
 
   if (!response.ok) {
     throw new Error(body?.error || 'تعذر إكمال الطلب.');
+  }
+
+  if (body === null) {
+    throw new Error('استجابة غير صالحة من الخادم. تأكد من ضبط API_BASE_URL إلى عنوان خدمة Cloud Run.');
   }
 
   return body;

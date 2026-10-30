@@ -69,8 +69,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       throw new Error('رقم الهاتف غير صالح.');
     }
     const data = await apiPost('/api/auth/login', { phone, password });
-    if (!data.token) {
-      throw new Error('تعذر إنشاء جلسة تسجيل الدخول.');
+    if (!data || !data.token) {
+      throw new Error('تعذر إنشاء جلسة تسجيل الدخول. Vérouillez l\'adresse de l\'API (API_BASE_URL).');
     }
     localStorage.setItem('ghaira_session', data.token);
     window.location.href = 'dashboard.html';

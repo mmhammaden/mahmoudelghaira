@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 .wrangler/
 .venv-workers/
+os
+uv.lock
+.venv/

@@ -5,15 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>تماريني – ثانوية الغايرة</title>
 <link rel="stylesheet" href="../js/common.css">
-<script src="../js/ui.js"></script>
-<script src="../js/auth.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
 </head>
 <body class="student-learning-page">
-<nav class="navbar">
-  <a href="../index.html" class="brand">ثانوية الغايرة</a>
-  <div class="nav-links" id="navLinks"></div>
-</nav>
 
 <div class="cmath-shell">
 <aside class="cmath-sidebar">
@@ -55,7 +50,6 @@
   <div id="exercisesContent" style="display:none;">
     <div id="chaptersView">
       <h2>الفصول الدراسية</h2>
-      <p class="small-note">اختر فصلاً لعرض تمارينه.</p>
       <div id="chaptersList" class="chapter-grid"></div>
     </div>
 
@@ -85,23 +79,15 @@
       </div>
     </div>
 
-      <section class="exercise-sheet" aria-labelledby="exerciseSheetTitle">
-        <div class="exercise-sheet-head">
-          <span class="sheet-rule"></span>
-          <h2 id="exerciseSheetTitle">Exercices</h2>
-          <p>Choisis un exercice, effectue ton calcul puis sélectionne la bonne réponse.</p>
-        </div>
-        <div id="exercisesList" class="exercise-list"></div>
-      </section>
+      <div class="exercise-sheet">
+        <div class="exercise-sheet-head" id="chapterExerciseSheetHead"></div>
+        <div id="exercisesList"></div>
+      </div>
     </div>
   </div>
 </div>
 </main>
 </div>
-
-<footer class="footer">
-  ثانوية الغايرة &mdash; جميع الحقوق محفوظة.
-</footer>
 
 <script>
 let profile;
@@ -112,7 +98,7 @@ async function init() {
   profile = await requireAuth();
   if (!profile) return;
   document.getElementById('sideStudentName').textContent = profile.name || 'Élève';
-  await buildNavbar();
+  await buildNavbar(profile);
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('exercisesContent').style.display = 'block';
@@ -149,6 +135,10 @@ async function showChapter(chapterId) {
   document.getElementById('chapterExercisesView').style.display = 'block';
   document.getElementById('chapterTitle').textContent = chapter.title;
   document.getElementById('chapterDescription').textContent = chapter.description;
+
+  const head = document.getElementById('chapterExerciseSheetHead');
+  head.innerHTML = '<h2>' + escapeHtml(chapter.title) + '</h2><p>' + escapeHtml(chapter.description || '') + '</p><span class="sheet-rule"></span>';
+
   history.replaceState(null, '', '/student/exercises.html?chapter_id=' + chapter.id);
   await loadExercises(chapter.id);
 }
