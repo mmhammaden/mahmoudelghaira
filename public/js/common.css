@@ -563,11 +563,7 @@ tr:last-child td { border-bottom: none; }
   background: #ddd;
 }
 
-.student-learning-page .cmath-calculator {
-  border: 1px solid #999;
-  background: #f7f7f7;
-  margin-top: 6px;
-}
+
 
 .student-learning-page .cmath-screen {
   height: 39px;
@@ -991,8 +987,7 @@ tr:last-child td { border-bottom: none; }
     gap: 6px;
   }
   .student-learning-page .cmath-ad-space { display: none; }
-  .student-learning-page .cmath-calculator { display: none; }
-  .student-learning-page .cmath-side-menu {
+    .student-learning-page .cmath-side-menu {
     grid-template-columns: repeat(3, 1fr);
     gap: 4px;
   }
