@@ -257,6 +257,28 @@ def login():
         return redirect(url_for("dashboard"))
     return render_template("login.html")
 
+# Route API pour le login en JSON (utilisée par le frontend)
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    data = request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip()
+    password = (data.get("password") or "")
+    return login_json(phone, password)
+
+def login_json(phone, password):
+    """Retourne un JSON compatible avec le frontend au lieu de redirect."""
+    session.clear()
+    if not phone or not password:
+        return {"error": "Missing phone or password"}, 400
+    user = query_db("SELECT * FROM users WHERE phone = ?", [phone], one=True)
+    if user and check_password_hash(user["password_hash"], password):
+        session["user_id"] = user["id"]
+        session["name"] = user["name"]
+        session["role"] = user["role"]
+        session["class_id"] = user["class_id"]
+        return {"ok": True, "role": user["role"], "name": user["name"]}
+    return {"error": "Invalid phone number or password."}, 401
+
 # --------------------------------------------------------------------------- #
 # Token store (in-memory — sufficient for free-tier single-instance Render)
 # --------------------------------------------------------------------------- #
