@@ -1038,3 +1038,19 @@ tr:last-child td { border-bottom: none; }
   .student-learning-page .math-paper { padding: 16px 18px 24px; }
   .student-learning-page .math-question { font-size: 17px; }
 }
+
+
+/* Class badge in sidebar */
+.student-learning-page .cmath-class-badge {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #888;
+  border-radius: 5px;
+  background: #f3f3a5;
+  color: #222;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  padding: 4px 8px;
+}
