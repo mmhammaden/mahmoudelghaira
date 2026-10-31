@@ -2,6 +2,7 @@ import os
 import re
 import secrets
 import psycopg2
+import psycopg2.pool
 from psycopg2.extras import DictCursor
 from functools import wraps
 
@@ -30,6 +31,8 @@ CORS(app, origins=[
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://ghaira:ghaira@localhost:5433/ghaira")
 
+_pool = psycopg2.pool.ThreadedConnectionPool(1, 5, DATABASE_URL, cursor_factory=DictCursor)
+
 # Phone rule: exactly 8 digits, starting with 2, 3 or 4. No verification of ownership.
 PHONE_RE = re.compile(r"^[234]\d{7}$")
 
@@ -40,7 +43,7 @@ PHONE_RE = re.compile(r"^[234]\d{7}$")
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
-        db = g._database = psycopg2.connect(DATABASE_URL, cursor_factory=DictCursor)
+        db = g._database = _pool.getconn()
     return db
 
 
@@ -48,7 +51,7 @@ def get_db():
 def close_db(exception):
     db = getattr(g, "_database", None)
     if db is not None:
-        db.close()
+        _pool.putconn(db)
 
 
 def _adapt(q):
@@ -225,6 +228,8 @@ def current_user():
 
 @app.context_processor
 def inject_user():
+    if request.path.startswith('/api/'):
+        return {}
     return dict(current_user=current_user())
 
 
