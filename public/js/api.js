@@ -4,7 +4,7 @@
 
 // Set this to your Render service URL, e.g.
 // 'https://ghaira-api-xxxx.onrender.com'. Leave empty to use the same origin.
-const API_BASE_URL = '';
+const API_BASE_URL = 'https://ghaira-api.onrender.com';
 
 async function apiRequest(path, options = {}) {
   const token = localStorage.getItem('ghaira_session');
