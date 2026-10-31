@@ -1,6 +1,6 @@
 import os
 import re
-import requests
+import secrets
 import psycopg2
 from psycopg2.extras import DictCursor
 from functools import wraps
@@ -14,6 +14,7 @@ from flask import (
     session,
     flash,
     g,
+    jsonify,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
@@ -21,7 +22,6 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 
-# CORS — autorise Firebase Hosting (à adapter avec ton domaine Firebase)
 CORS(app, origins=[
     "https://exercice7.web.app",
     "https://exercice7.firebaseapp.com",
@@ -257,27 +257,302 @@ def login():
         return redirect(url_for("dashboard"))
     return render_template("login.html")
 
-# Route API pour le login en JSON (utilisée par le frontend)
-@app.route("/api/login", methods=["POST"])
-def api_login():
+# --------------------------------------------------------------------------- #
+# Token store (in-memory — sufficient for free-tier single-instance Render)
+# --------------------------------------------------------------------------- #
+_tokens = {}  # token -> user_id
+
+def _create_token(user_id):
+    token = secrets.token_hex(32)
+    _tokens[token] = user_id
+    return token
+
+def _get_user_from_token():
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        user_id = _tokens.get(token)
+        if user_id:
+            return query_db("SELECT * FROM users WHERE id = ?", [user_id], one=True)
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# JSON API routes (used by Firebase frontend)
+# --------------------------------------------------------------------------- #
+@app.route("/api/auth/login", methods=["POST"])
+def api_auth_login():
     data = request.get_json(silent=True) or {}
     phone = (data.get("phone") or "").strip()
-    password = (data.get("password") or "")
-    return login_json(phone, password)
-
-def login_json(phone, password):
-    """Retourne un JSON compatible avec le frontend au lieu de redirect."""
-    session.clear()
+    password = data.get("password") or ""
     if not phone or not password:
-        return {"error": "Missing phone or password"}, 400
+        return jsonify(error="Missing phone or password"), 400
     user = query_db("SELECT * FROM users WHERE phone = ?", [phone], one=True)
     if user and check_password_hash(user["password_hash"], password):
-        session["user_id"] = user["id"]
-        session["name"] = user["name"]
-        session["role"] = user["role"]
-        session["class_id"] = user["class_id"]
-        return {"ok": True, "role": user["role"], "name": user["name"]}
-    return {"error": "Invalid phone number or password."}, 401
+        token = _create_token(user["id"])
+        return jsonify(token=token, role=user["role"], name=user["name"])
+    return jsonify(error="Invalid phone number or password."), 401
+
+
+@app.route("/api/auth/register", methods=["POST"])
+def api_auth_register():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    password = data.get("password") or ""
+    class_id = data.get("class_id")
+
+    if not name:
+        return jsonify(error="Name is required."), 400
+    if not PHONE_RE.match(phone):
+        return jsonify(error="Phone number must be exactly 8 digits and start with 2, 3, or 4."), 400
+    if not password or len(password) < 6:
+        return jsonify(error="Password must be at least 6 characters."), 400
+    if not class_id:
+        return jsonify(error="Please select a class."), 400
+    if query_db("SELECT id FROM users WHERE phone = ?", [phone], one=True):
+        return jsonify(error="Phone number already exists."), 409
+
+    execute_db(
+        "INSERT INTO users (name, phone, password_hash, role, class_id) VALUES (?, ?, ?, ?, ?)",
+        (name, phone, generate_password_hash(password), "student", int(class_id)),
+        commit=True,
+    )
+    return jsonify(ok=True), 201
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def api_auth_logout():
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        _tokens.pop(auth[7:], None)
+    return jsonify(ok=True)
+
+
+@app.route("/api/profile/me")
+def api_profile_me():
+    user = _get_user_from_token()
+    if not user:
+        return jsonify(error="Unauthorized"), 401
+    return jsonify(id=user["id"], name=user["name"], role=user["role"], class_id=user["class_id"])
+
+
+@app.route("/api/classes")
+def api_classes():
+    classes = query_db("SELECT id, name FROM classes ORDER BY name")
+    return jsonify(classes=[{"id": c["id"], "name": c["name"]} for c in classes])
+
+
+# chapters = classes (no separate table — map class as chapter)
+@app.route("/api/chapters")
+def api_chapters():
+    user = _get_user_from_token()
+    if not user:
+        return jsonify(error="Unauthorized"), 401
+    class_id = request.args.get("class_id")
+    if class_id:
+        rows = query_db("SELECT id, name FROM classes WHERE id = ?", [int(class_id)])
+    else:
+        rows = query_db(
+            "SELECT c.id, c.name, COUNT(e.id) AS exercise_count "
+            "FROM classes c LEFT JOIN exercises e ON e.class_id = c.id "
+            "WHERE c.id = ? GROUP BY c.id",
+            [user["class_id"]]
+        ) if user["role"] == "student" else query_db(
+            "SELECT c.id, c.name, COUNT(e.id) AS exercise_count "
+            "FROM classes c LEFT JOIN exercises e ON e.class_id = c.id "
+            "GROUP BY c.id ORDER BY c.name"
+        )
+    return jsonify(chapters=[{"id": r["id"], "title": r["name"],
+                               "description": "", "exercise_count": r.get("exercise_count", 0)} for r in rows])
+
+
+@app.route("/api/exercises")
+def api_exercises():
+    user = _get_user_from_token()
+    if not user:
+        return jsonify(error="Unauthorized"), 401
+    chapter_id = request.args.get("chapter_id")  # chapter_id == class_id
+    class_id = chapter_id if chapter_id else user.get("class_id")
+    rows = query_db("SELECT * FROM exercises WHERE class_id = ? ORDER BY id", [class_id])
+    return jsonify(exercises=[dict(r) for r in rows])
+
+
+@app.route("/api/exercises/<int:exercise_id>")
+def api_exercise_get(exercise_id):
+    user = _get_user_from_token()
+    if not user:
+        return jsonify(error="Unauthorized"), 401
+    ex = query_db("SELECT * FROM exercises WHERE id = ?", [exercise_id], one=True)
+    if not ex:
+        return jsonify(error="Not found"), 404
+    d = dict(ex)
+    d["chapter_id"] = ex["class_id"]  # frontend uses chapter_id
+    return jsonify(d)
+
+
+@app.route("/api/exercises/<int:exercise_id>/submit", methods=["POST"])
+def api_exercise_submit(exercise_id):
+    user = _get_user_from_token()
+    if not user:
+        return jsonify(error="Unauthorized"), 401
+    ex = query_db("SELECT * FROM exercises WHERE id = ?", [exercise_id], one=True)
+    if not ex:
+        return jsonify(error="Not found"), 404
+    data = request.get_json(silent=True) or {}
+    answer = data.get("answer", "")
+    correct = answer == ex["correct_answer"]
+    execute_db(
+        "INSERT INTO results (user_id, exercise_id, score, total) VALUES (?, ?, ?, ?)",
+        [user["id"], exercise_id, 1 if correct else 0, 1],
+        commit=True,
+    )
+    return jsonify(correct=correct)
+
+
+@app.route("/api/results")
+def api_results():
+    user = _get_user_from_token()
+    if not user:
+        return jsonify(error="Unauthorized"), 401
+    rows = query_db(
+        "SELECT r.id, r.exercise_id, e.title AS exercise_title, r.score, r.total, r.submitted_at "
+        "FROM results r JOIN exercises e ON r.exercise_id = e.id "
+        "WHERE r.user_id = ? ORDER BY r.submitted_at DESC",
+        [user["id"]]
+    )
+    return jsonify(results=[dict(r) for r in rows])
+
+
+# --------------------------------------------------------------------------- #
+# Admin API routes
+# --------------------------------------------------------------------------- #
+def _require_admin():
+    user = _get_user_from_token()
+    if not user or user["role"] != "admin":
+        return None
+    return user
+
+
+@app.route("/api/admin/users")
+def api_admin_users():
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    rows = query_db(
+        "SELECT u.id, u.name, u.phone, u.role, u.class_id, c.name AS class_name "
+        "FROM users u LEFT JOIN classes c ON u.class_id = c.id ORDER BY u.role DESC, u.name"
+    )
+    return jsonify(users=[dict(r) for r in rows])
+
+
+@app.route("/api/admin/users/<int:user_id>/role", methods=["PUT"])
+def api_admin_user_role(user_id):
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    data = request.get_json(silent=True) or {}
+    role = data.get("role")
+    if role not in ("admin", "student"):
+        return jsonify(error="Invalid role"), 400
+    execute_db("UPDATE users SET role = ? WHERE id = ?", [role, user_id], commit=True)
+    return jsonify(ok=True)
+
+
+@app.route("/api/admin/users/<int:user_id>/class", methods=["PUT"])
+def api_admin_user_class(user_id):
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    data = request.get_json(silent=True) or {}
+    class_id = data.get("class_id")
+    execute_db("UPDATE users SET class_id = ? WHERE id = ?",
+               [int(class_id) if class_id else None, user_id], commit=True)
+    return jsonify(ok=True)
+
+
+@app.route("/api/admin/users/<int:user_id>", methods=["DELETE"])
+def api_admin_user_delete(user_id):
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    execute_db("DELETE FROM results WHERE user_id = ?", [user_id], commit=True)
+    execute_db("DELETE FROM users WHERE id = ?", [user_id], commit=True)
+    return jsonify(ok=True)
+
+
+@app.route("/api/admin/exercises")
+def api_admin_exercises():
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    rows = query_db(
+        "SELECT e.*, c.name AS class_name FROM exercises e "
+        "JOIN classes c ON e.class_id = c.id ORDER BY e.id DESC"
+    )
+    return jsonify(exercises=[dict(r) for r in rows])
+
+
+@app.route("/api/admin/exercises/<int:exercise_id>")
+def api_admin_exercise_get(exercise_id):
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    ex = query_db("SELECT * FROM exercises WHERE id = ?", [exercise_id], one=True)
+    if not ex:
+        return jsonify(error="Not found"), 404
+    d = dict(ex)
+    d["chapter_id"] = ex["class_id"]
+    return jsonify(d)
+
+
+@app.route("/api/admin/exercises", methods=["POST"])
+def api_admin_exercise_create():
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    data = request.get_json(silent=True) or {}
+    class_id = data.get("chapter_id") or data.get("class_id")
+    execute_db(
+        "INSERT INTO exercises (title, question, option_a, option_b, option_c, option_d, correct_answer, class_id) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (data.get("title"), data.get("question"), data.get("option_a"), data.get("option_b"),
+         data.get("option_c"), data.get("option_d"), data.get("correct_answer"), int(class_id)),
+        commit=True,
+    )
+    return jsonify(ok=True), 201
+
+
+@app.route("/api/admin/exercises/<int:exercise_id>", methods=["PUT"])
+def api_admin_exercise_update(exercise_id):
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    data = request.get_json(silent=True) or {}
+    class_id = data.get("chapter_id") or data.get("class_id")
+    execute_db(
+        "UPDATE exercises SET title=?, question=?, option_a=?, option_b=?, option_c=?, option_d=?, "
+        "correct_answer=?, class_id=? WHERE id=?",
+        (data.get("title"), data.get("question"), data.get("option_a"), data.get("option_b"),
+         data.get("option_c"), data.get("option_d"), data.get("correct_answer"), int(class_id), exercise_id),
+        commit=True,
+    )
+    return jsonify(ok=True)
+
+
+@app.route("/api/admin/exercises/<int:exercise_id>", methods=["DELETE"])
+def api_admin_exercise_delete(exercise_id):
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    execute_db("DELETE FROM results WHERE exercise_id = ?", [exercise_id], commit=True)
+    execute_db("DELETE FROM exercises WHERE id = ?", [exercise_id], commit=True)
+    return jsonify(ok=True)
+
+
+@app.route("/api/admin/results")
+def api_admin_results():
+    if not _require_admin():
+        return jsonify(error="Unauthorized"), 401
+    rows = query_db(
+        "SELECT r.id, r.user_id, r.exercise_id, u.name AS student_name, u.class_id, "
+        "c.name AS class_name, e.title AS exercise_title, r.score, r.total, r.submitted_at "
+        "FROM results r JOIN users u ON r.user_id = u.id "
+        "LEFT JOIN classes c ON u.class_id = c.id "
+        "JOIN exercises e ON r.exercise_id = e.id ORDER BY r.submitted_at DESC"
+    )
+    return jsonify(results=[dict(r) for r in rows])
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -693,16 +968,16 @@ def student_results():
 
 @app.route('/api/admin/users/delete', methods=['POST'])
 def admin_user_delete_neon():
+    user = _get_user_from_token()
+    if not user or user["role"] != "admin":
+        return jsonify(error="Unauthorized"), 401
     data = request.get_json(silent=True) or {}
     user_id = data.get('user_id')
     if not user_id:
-        return {'error': 'Missing user_id'}, 400
-
-    # Delete associated results first, then profile (foreign key constraint order)
-    execute_db("DELETE FROM results WHERE user_id = ?", user_id, commit=True)
-    execute_db("DELETE FROM profiles WHERE id = ?", user_id, commit=True)
-
-    return {'ok': True}
+        return jsonify(error='Missing user_id'), 400
+    execute_db("DELETE FROM results WHERE user_id = ?", [user_id], commit=True)
+    execute_db("DELETE FROM users WHERE id = ?", [user_id], commit=True)
+    return jsonify(ok=True)
 
 # --------------------------------------------------------------------------- #
 # Run

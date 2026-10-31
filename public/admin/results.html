@@ -88,7 +88,6 @@ async function loadResults() {
     if (classId) results = results.filter(r => r.class_id == classId);
     if (studentId) results = results.filter(r => r.user_id == studentId);
 
-  try {
     const tbody = document.querySelector('#resultsTable tbody');
     tbody.innerHTML = (results || []).map(r => {
       return `<tr>
