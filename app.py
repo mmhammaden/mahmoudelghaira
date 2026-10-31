@@ -16,9 +16,16 @@ from flask import (
     g,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+
+# CORS — autorise Firebase Hosting (à adapter avec ton domaine Firebase)
+CORS(app, origins=[
+    "https://exercice7.web.app",
+    "https://exercice7.firebaseapp.com",
+], supports_credentials=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://ghaira:ghaira@localhost:5433/ghaira")

@@ -1,39 +1,52 @@
-# Deployment Guide — exercice7.web.app
+# Deployment Guide — Render + Firebase + Neon
 
-## Components
+## Architecture
 
-- `public/` is deployed to Firebase Hosting.
-- The Flask API (`app.py`) connects to the Neon PostgreSQL database.
-- Neon stores classes, users, profiles, sessions, exercises, and results.
+- `public/` is deployed to **Firebase Hosting** (static frontend).
+- The Flask API (`app.py`) is deployed to **Render** (web service).
+- **Neon** PostgreSQL stores classes, users, profiles, sessions, exercises, and results.
+- Phone numbers must contain eight digits and begin with 2, 3, or 4.
+- Passwords are stored as salted PBKDF2-SHA256 hashes.
 
-## Commands
+## Prerequisites
+
+- A [Render](https://render.com) account (free plan OK).
+- A [Neon](https://neon.com) project with a database.
+- A [Firebase](https://firebase.google.com) project for Hosting.
+
+## Step 1 — Deploy the API on Render
+
+1. Connect your GitHub repository to Render.
+2. Render detects `render.yaml` at the root.
+3. Add the environment variables in the Render dashboard:
+   - `DATABASE_URL` = your Neon connection string (with `sslmode=require`)
+   - `SECRET_KEY` = a random string (e.g. `python3 -c "import secrets; print(secrets.token_hex(32))"`)
+4. Render will build and deploy. Note your service URL, e.g. `https://ghaira-api-xxxx.onrender.com`.
+
+## Step 2 — Configure the frontend
+
+Edit `public/js/api.js` and set `API_BASE_URL` to your Render service URL:
+
+```js
+const API_BASE_URL = 'https://ghaira-api-xxxx.onrender.com';
+```
+
+## Step 3 — Deploy Firebase Hosting
 
 ```bash
-# 1. Apply the Neon database schema
-psql "$DATABASE_URL" -f backend/schema.sql
-
-# 2. Deploy Firebase Hosting
+cd /home/kali/Desktop/ghaira
 firebase deploy --only hosting:exercice7 --project mahmoudelghaira
-
-# 3. Deploy the Flask API to Google Cloud Run (connects to Neon)
-gcloud run deploy ghaira-api \
-  --source /home/kali/Desktop/ghaira/backend \
-  --region europe-west1 \
-  --allow-unauthenticated
 ```
+
+## Step 4 — Initialize the database
+
+On first deploy, `init_db()` in `app.py` creates the tables and seeds default data (classes, admin user, sample exercises) automatically when the app receives its first request.
+
+Default admin: phone `31406022`, password `admin123`.
 
 ## Verification
 
-Register and log in through `https://exercice7.web.app` using an eight-digit
-phone number beginning with 2, 3, or 4.
+- Open your Firebase Hosting URL (e.g. `https://exercice7.web.app`).
+- Register with an 8-digit phone number starting with 2, 3, or 4.
+- Log in and test exercises and results.
 
-The authenticated API routes used by the frontend are:
-
-- `GET /api/profile/me`
-- `GET /api/exercises` (returns exercises for the student's class)
-- `POST /api/exercises/<id>/submit` with `{ "answer": "A" }`
-- `POST /api/auth/logout`
-
-Create a production administrator by inserting a row directly into the Neon
-`profiles` and `users` tables (phone must be 8 digits starting with 2, 3, or 4;
-passwords are stored as PBKDF2-SHA256 hashes).

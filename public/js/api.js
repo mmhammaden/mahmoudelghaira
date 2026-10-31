@@ -1,9 +1,9 @@
 // ============================================================
-// API helper — talks to the Flask API (Google Cloud Run + Neon).
+// API helper — talks to the Flask API (Render + Neon).
 // ============================================================
 
-// Set this to your Cloud Run service URL, e.g.
-// 'https://ghaira-api-XXXX.run.app'. Leave empty to use the same origin.
+// Set this to your Render service URL, e.g.
+// 'https://ghaira-api-xxxx.onrender.com'. Leave empty to use the same origin.
 const API_BASE_URL = '';
 
 async function apiRequest(path, options = {}) {
