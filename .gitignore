@@ -8,3 +8,10 @@ __pycache__/
 os
 uv.lock
 .venv/
+src/
+work/
+admin-browser-audit.py
+legacy-parity.patch
+backend/schema.sql.backup
+backend/schema.sql.bak
+.firebase/

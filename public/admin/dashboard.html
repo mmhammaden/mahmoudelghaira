@@ -34,13 +34,21 @@
     </div>
 
     <div class="card">
+      <h2>الطلاب ونتائجهم</h2>
+      <p class="small-note">اضغط على اسم الطالب لعرض التمارين التي أنجزها ونتائجه.</p>
+      <div id="studentsList"></div>
+    </div>
+
+    <div class="card mt-2">
       <h2>أحدث النتائج</h2>
-      <table id="recentTable">
-        <thead>
-          <tr><th>الطالب</th><th>الصف</th><th>التمرين</th><th>النتيجة</th><th>تاريخ الإرسال</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrapper">
+        <table id="recentTable">
+          <thead>
+            <tr><th>الطالب</th><th>الصف</th><th>التمرين</th><th>النتيجة</th><th>تاريخ الإرسال</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -48,6 +56,14 @@
 <footer class="footer">
   ثانوية الغايرة &mdash; جميع الحقوق محفوظة.
 </footer>
+
+<style>
+  details.student-box { border: 1px solid #e3e6ea; border-radius: 10px; padding: .75rem 1rem; margin-bottom: .6rem; background: #fafbfc; }
+  details.student-box summary { cursor: pointer; font-weight: bold; display: flex; flex-wrap: wrap; gap: .4rem .9rem; align-items: center; }
+  details.student-box summary .meta { font-weight: normal; color: #667; font-size: .85rem; }
+  details.student-box[open] summary { margin-bottom: .75rem; }
+  .score-pill { display: inline-block; padding: .1rem .55rem; border-radius: 999px; font-size: .8rem; background: #e8f5e9; color: #1b5e20; }
+</style>
 
 <script>
 let profile;
@@ -59,8 +75,7 @@ async function init() {
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('dashboardContent').style.display = 'block';
-  await loadStats();
-  await loadRecent();
+  await Promise.all([loadStats(), loadStudents(), loadRecent()]);
 }
 
 async function loadStats() {
@@ -84,6 +99,61 @@ async function loadStats() {
   }
 }
 
+async function loadStudents() {
+  const container = document.getElementById('studentsList');
+  try {
+    const [uRes, rRes] = await Promise.all([
+      apiGet('/api/admin/users'),
+      apiGet('/api/admin/results')
+    ]);
+    const students = (uRes.users || []).filter(u => u.role === 'student');
+    const results = rRes.results || [];
+
+    if (!students.length) {
+      container.innerHTML = '<div class="empty-state"><p class="fw-bold">لا يوجد طلاب بعد.</p></div>';
+      return;
+    }
+
+    // Group results by student
+    const byStudent = {};
+    for (const r of results) {
+      (byStudent[r.user_id] = byStudent[r.user_id] || []).push(r);
+    }
+
+    container.innerHTML = students.map(s => {
+      const own = byStudent[s.id] || [];
+      const avg = own.length
+        ? Math.round(own.reduce((sum, r) => sum + (r.total ? (r.score / r.total) * 100 : 0), 0) / own.length)
+        : null;
+      const rows = own.map(r => `
+        <tr>
+          <td>${escapeHtml(r.exercise_title || ('التمرين #' + r.exercise_id))}</td>
+          <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
+          <td>${escapeHtml(formatDate(r.submitted_at))}</td>
+        </tr>`).join('');
+
+      return `
+        <details class="student-box">
+          <summary>
+            <span>${escapeHtml(s.name)}</span>
+            <span class="meta">${escapeHtml(s.class_name || 'بدون صف')}</span>
+            <span class="meta">${own.length} تمرين منجز</span>
+            ${avg !== null ? `<span class="score-pill">متوسط ${avg}%</span>` : ''}
+          </summary>
+          ${own.length ? `
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>التمرين</th><th>النتيجة</th><th>التاريخ</th></tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>` : '<p class="small-note">لم ينجز هذا الطالب أي تمرين بعد.</p>'}
+        </details>`;
+    }).join('');
+  } catch (err) {
+    showAlert(err.message, 'error');
+  }
+}
+
 async function loadRecent() {
   try {
     const data = await apiGet('/api/admin/results');
@@ -91,11 +161,10 @@ async function loadRecent() {
 
     const tbody = document.querySelector('#recentTable tbody');
     tbody.innerHTML = (results || []).slice(0, 10).map(r => {
-      const cls = escapeHtml(r.class_name) || '-';
       return `<tr>
         <td>${escapeHtml(r.student_name)}</td>
-        <td>${cls}</td>
-        <td>التمرين #${r.exercise_id}</td>
+        <td>${escapeHtml(r.class_name) || '-'}</td>
+        <td>${escapeHtml(r.exercise_title || ('التمرين #' + r.exercise_id))}</td>
         <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
         <td>${escapeHtml(formatDate(r.submitted_at))}</td>
       </tr>`;

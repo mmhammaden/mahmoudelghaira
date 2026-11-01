@@ -103,7 +103,7 @@ function isCurrentPage(path) {
 // Returns the profile object or null
 async function requireAuth(allowAdmin = false) {
   if (!localStorage.getItem('ghaira_session')) {
-    window.location.href = '/login.html';
+    window.location.href = '/';
     return null;
   }
 
@@ -112,7 +112,7 @@ async function requireAuth(allowAdmin = false) {
     profile = await apiGet('/api/profile/me');
   } catch (err) {
     localStorage.removeItem('ghaira_session');
-    window.location.href = '/login.html';
+    window.location.href = '/';
     return null;
   }
 
@@ -128,7 +128,7 @@ async function requireAuth(allowAdmin = false) {
 async function signOut() {
   try { await apiPost('/api/auth/logout', {}); } catch (err) { /* Clear local state regardless. */ }
   localStorage.removeItem('ghaira_session');
-  window.location.href = '/login.html';
+  window.location.href = '/';
 }
 
 // Create a confirmation dialog

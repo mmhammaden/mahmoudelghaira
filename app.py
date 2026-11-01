@@ -126,8 +126,38 @@ def init_db():
             "FOREIGN KEY (user_id) REFERENCES users(id), "
             "FOREIGN KEY (exercise_id) REFERENCES exercises(id))"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS chapters ("
+            "id SERIAL PRIMARY KEY, "
+            "name TEXT NOT NULL, "
+            "class_id INTEGER NOT NULL, "
+            "exercise_count INTEGER DEFAULT 0, "
+            "created_at TEXT DEFAULT CURRENT_TIMESTAMP, "
+            "FOREIGN KEY (class_id) REFERENCES classes(id))"
+        )
+        cur.execute(
+            "ALTER TABLE exercises ADD COLUMN IF NOT EXISTS chapter_id INTEGER "
+            "REFERENCES chapters(id)"
+        )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_exercises_chapter ON exercises(chapter_id)"
+        )
         db.commit()
         cur.close()
+
+        # Backfill chapters: every class gets a default chapter, and every
+        # exercise is attached to the first chapter of its class.
+        cur = db.cursor()
+        cur.execute(
+            "INSERT INTO chapters (name, class_id) "
+            "SELECT 'الفصل الأول', c.id FROM classes c "
+            "WHERE NOT EXISTS (SELECT 1 FROM chapters ch WHERE ch.class_id = c.id)"
+        )
+        cur.execute(
+            "UPDATE exercises e SET chapter_id = ch.id FROM chapters ch "
+            "WHERE ch.class_id = e.class_id AND e.chapter_id IS NULL"
+        )
+        db.commit()
 
         # Seed classes if empty — Algerian secondary school classes
         cur = db.cursor()
@@ -362,6 +392,15 @@ def api_profile_me():
     if not user:
         return jsonify(error="Unauthorized"), 401
     return jsonify(id=user["id"], name=user["name"], role=user["role"], class_id=user["class_id"])
+
+
+# Public stats
+@app.route("/api/stats")
+def api_stats():
+    exercises = query_db("SELECT COUNT(*) AS c FROM exercises", one=True)["c"]
+    results = query_db("SELECT COUNT(*) AS c FROM results", one=True)["c"]
+    classes = query_db("SELECT COUNT(*) AS c FROM classes", one=True)["c"]
+    return jsonify(exercises=exercises, results=results, classes=classes)
 
 
 @app.route("/api/classes")

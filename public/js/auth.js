@@ -6,7 +6,7 @@
 // Returns the profile object or null (redirects to login)
 async function requireAuth(allowAdmin = false) {
   if (!localStorage.getItem('ghaira_session')) {
-    window.location.href = '/login.html';
+    window.location.href = '/';
     return null;
   }
 
@@ -19,7 +19,7 @@ async function requireAuth(allowAdmin = false) {
     return profile;
   } catch (err) {
     localStorage.removeItem('ghaira_session');
-    window.location.href = '/login.html';
+    window.location.href = '/';
     return null;
   }
 }
@@ -36,7 +36,7 @@ async function buildNavbar() {
     return profile;
   } catch (err) {
     localStorage.removeItem('ghaira_session');
-    window.location.href = '/login.html';
+    window.location.href = '/';
     return null;
   }
 }
@@ -67,5 +67,5 @@ async function buildNavbarLinks(profile) {
 async function signOut() {
   try { await apiPost('/api/auth/logout', {}); } catch (err) { /* Clear local state regardless. */ }
   localStorage.removeItem('ghaira_session');
-  window.location.href = '/login.html';
+  window.location.href = '/';
 }
