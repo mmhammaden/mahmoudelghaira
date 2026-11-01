@@ -376,18 +376,20 @@ def api_chapters():
     user = _get_user_from_token()
     if not user:
         return jsonify(error="Unauthorized"), 401
-    class_id = request.args.get("class_id")
-    if class_id:
-        rows = query_db("SELECT id, name FROM classes WHERE id = ?", [int(class_id)])
-    else:
+    if user["role"] == "student":
+        # Students only see chapters for their assigned class
+        class_id = user["class_id"]
         rows = query_db(
             "SELECT c.id, c.name, COUNT(e.id) AS exercise_count "
-            "FROM classes c LEFT JOIN exercises e ON e.class_id = c.id "
-            "WHERE c.id = ? GROUP BY c.id",
-            [user["class_id"]]
-        ) if user["role"] == "student" else query_db(
+            "FROM chapters c LEFT JOIN exercises e ON e.chapter_id = c.id "
+            "WHERE c.class_id = ? GROUP BY c.id",
+            [class_id]
+        )
+    else:
+        # Admins see all chapters
+        rows = query_db(
             "SELECT c.id, c.name, COUNT(e.id) AS exercise_count "
-            "FROM classes c LEFT JOIN exercises e ON e.class_id = c.id "
+            "FROM chapters c LEFT JOIN exercises e ON e.chapter_id = c.id "
             "GROUP BY c.id ORDER BY c.name"
         )
     return jsonify(chapters=[{"id": r["id"], "title": r["name"],
@@ -399,9 +401,26 @@ def api_exercises():
     user = _get_user_from_token()
     if not user:
         return jsonify(error="Unauthorized"), 401
-    chapter_id = request.args.get("chapter_id")  # chapter_id == class_id
-    class_id = chapter_id if chapter_id else user.get("class_id")
-    rows = query_db("SELECT * FROM exercises WHERE class_id = ? ORDER BY id", [class_id])
+    if user["role"] == "student":
+        # Students only see exercises for their assigned class's chapters
+        chapter_id = request.args.get("chapter_id")
+        if chapter_id:
+            class_id = user["class_id"]
+            # Verify the chapter belongs to the student's class
+            chapter = query_db("SELECT id FROM chapters WHERE id = ? AND class_id = ?", [chapter_id, class_id], one=True)
+            if not chapter:
+                return jsonify(error="Exercise not available for your class."), 403
+            rows = query_db("SELECT * FROM exercises WHERE chapter_id = ? ORDER BY id", [chapter_id])
+        else:
+            # If no chapter_id specified, show all exercises for student's class
+            rows = query_db("SELECT * FROM exercises WHERE class_id = ? ORDER BY id", [user["class_id"]])
+    else:
+        # Admins can filter by chapter_id or see all
+        chapter_id = request.args.get("chapter_id")
+        if chapter_id:
+            rows = query_db("SELECT * FROM exercises WHERE chapter_id = ? ORDER BY id", [chapter_id])
+        else:
+            rows = query_db("SELECT * FROM exercises ORDER BY id")
     return jsonify(exercises=[dict(r) for r in rows])
 
 
@@ -413,8 +432,16 @@ def api_exercise_get(exercise_id):
     ex = query_db("SELECT * FROM exercises WHERE id = ?", [exercise_id], one=True)
     if not ex:
         return jsonify(error="Not found"), 404
+    if user["role"] == "student":
+        # Students can only access exercises in their assigned class and chapter
+        if ex["class_id"] != user["class_id"]:
+            return jsonify(error="Exercise not available for your class."), 403
+        # Verify the exercise's chapter belongs to the student's class
+        chapter = query_db("SELECT id FROM chapters WHERE id = ? AND class_id = ?", [ex["chapter_id"], user["class_id"]], one=True)
+        if not chapter:
+            return jsonify(error="Exercise not available for your class."), 403
     d = dict(ex)
-    d["chapter_id"] = ex["class_id"]  # frontend uses chapter_id
+    d["chapter_id"] = ex["chapter_id"]
     return jsonify(d)
 
 
@@ -426,6 +453,14 @@ def api_exercise_submit(exercise_id):
     ex = query_db("SELECT * FROM exercises WHERE id = ?", [exercise_id], one=True)
     if not ex:
         return jsonify(error="Not found"), 404
+    if user["role"] == "student":
+        # Students can only submit answers for exercises in their assigned class and chapter
+        if ex["class_id"] != user["class_id"]:
+            return jsonify(error="Exercise not available for your class."), 403
+        # Verify the exercise's chapter belongs to the student's class
+        chapter = query_db("SELECT id FROM chapters WHERE id = ? AND class_id = ?", [ex["chapter_id"], user["class_id"]], one=True)
+        if not chapter:
+            return jsonify(error="Exercise not available for your class."), 403
     data = request.get_json(silent=True) or {}
     answer = data.get("answer", "")
     correct = answer == ex["correct_answer"]

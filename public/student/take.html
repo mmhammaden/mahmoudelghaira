@@ -24,8 +24,8 @@
 
   <div id="takeContent" class="take-shell" style="display:none;">
     <div class="take-topline">
-      <span>2AS · Mathématiques</span>
-      <a href="/student/exercises.html" id="cancelLink" class="lesson-back">← Retour au chapitre</a>
+      <span id="chapterName">الفصل</span>
+      <a href="/student/exercises.html" id="cancelLink" class="lesson-back">← فصولي</a>
     </div>
     <div class="math-paper">
       <form id="answerForm">
@@ -39,6 +39,7 @@
           <label class="answer-choice"><input type="radio" name="answer" value="C"><span class="answer-letter">C</span><span id="optC"></span></label>
           <label class="answer-choice"><input type="radio" name="answer" value="D"><span class="answer-letter">D</span><span id="optD"></span></label>
         </div>
+        <p class="score-counter">النقاط: <span id="score">0</span>/<span id="total">0</span></p>
         <button type="submit" class="btn btn-primary btn-block math-submit" id="submitBtn">Valider ma réponse</button>
       </form>
     </div>
@@ -55,7 +56,7 @@ exerciseId = urlParams.get('id');
 async function init() {
   profile = await requireAuth();
   if (!profile) return;
-  document.getElementById('sideStudentName').textContent = profile.name || 'Élève';
+  
   await buildNavbar(profile);
 
   document.getElementById('loadingState').style.display = 'none';

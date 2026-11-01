@@ -3,23 +3,20 @@
 
 {% block content %}
 <h2>{{ exercise.title }}</h2>
-<div class="card">
-    <form method="POST">
-        <p>{{ exercise.question }}</p>
-        <div class="field-group">
-            <label><input type="radio" name="answer" value="A" required> {{ exercise.option_a }}</label>
+<div class="card student-learning-page">
+    <form method="POST" id="answerForm">
+        <span class="lesson-kicker">تمرين</span>
+        <h1>{{ exercise.title }}</h1>
+        <p class="math-question" dir="ltr">{{ exercise.question }}</p>
+        <p class="answer-instruction">Choisis la bonne réponse :</p>
+        <div class="answer-grid" dir="ltr">
+            <label class="answer-choice"><input type="radio" name="answer" value="A" required><span class="answer-letter">A</span><span>{{ exercise.option_a }}</span></label>
+            <label class="answer-choice"><input type="radio" name="answer" value="B"><span class="answer-letter">B</span><span>{{ exercise.option_b }}</span></label>
+            <label class="answer-choice"><input type="radio" name="answer" value="C"><span class="answer-letter">C</span><span>{{ exercise.option_c }}</span></label>
+            <label class="answer-choice"><input type="radio" name="answer" value="D"><span class="answer-letter">D</span><span>{{ exercise.option_d }}</span></label>
         </div>
-        <div class="field-group">
-            <label><input type="radio" name="answer" value="B"> {{ exercise.option_b }}</label>
-        </div>
-        <div class="field-group">
-            <label><input type="radio" name="answer" value="C"> {{ exercise.option_c }}</label>
-        </div>
-        <div class="field-group">
-            <label><input type="radio" name="answer" value="D"> {{ exercise.option_d }}</label>
-        </div>
-        <button type="submit" class="btn primary">Submit Answer</button>
-        <a href="{{ url_for('student_exercises') }}" class="btn ghost">Cancel</a>
+        <p class="score-counter">النقاط: <span id="score">0</span>/<span id="total">0</span></p>
+        <button type="submit" class="btn btn-primary btn-block math-submit">Valider ma réponse</button>
     </form>
 </div>
 {% endblock %}

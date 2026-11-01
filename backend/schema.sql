@@ -3,6 +3,14 @@ CREATE TABLE IF NOT EXISTS classes (
     name TEXT NOT NULL UNIQUE
 );
 
+CREATE TABLE IF NOT EXISTS chapters (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    class_id INTEGER NOT NULL REFERENCES classes(id),
+    exercise_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     phone TEXT NOT NULL UNIQUE,
@@ -41,6 +49,7 @@ CREATE TABLE IF NOT EXISTS exercises (
     correct_answer TEXT NOT NULL
         CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
     class_id INTEGER NOT NULL,
+    chapter_id INTEGER DEFAULT 1 REFERENCES chapters(id),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classes(id)
 );
@@ -59,6 +68,7 @@ CREATE TABLE IF NOT EXISTS results (
 
 CREATE INDEX IF NOT EXISTS idx_profiles_class ON profiles(class_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_class ON exercises(class_id);
+CREATE INDEX IF NOT EXISTS idx_exercises_chapter ON exercises(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_results_user ON results(user_id);
 CREATE INDEX IF NOT EXISTS idx_results_exercise ON results(exercise_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
