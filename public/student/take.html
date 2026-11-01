@@ -8,26 +8,11 @@
 <script src="../js/api.js"></script>
 <script src="../js/ui.js"></script>
 </head>
-<body class="student-learning-page">
-
-<div class="cmath-shell">
-<aside class="cmath-sidebar">
-  <div class="cmath-ad-space" aria-hidden="true"></div>
-  <div class="cmath-user-box"><div class="cmath-user-name" id="sideStudentName">Élève</div><div class="cmath-score">Exercice en cours</div></div>
-  <nav class="cmath-side-menu" aria-label="Menu élève">
-    <a href="/student/exercises.html" class="active">Exercices</a>
-    <a href="/student/results.html">Bilan</a>
-    <button type="button" onclick="signOut()">Déconnexion</button>
-  </nav>
-  <div class="cmath-keys"><span>√</span><span>^</span><span>←</span><span>CE</span><span>+</span><span>7</span><span>8</span><span>9</span><span>−</span><span>4</span><span>5</span><span>6</span><span>×</span><span>1</span><span>2</span><span>3</span><span>÷</span><span>0</span><span>±</span><span>=</span></div></div>
-</aside>
-<main class="cmath-main">
-  <header class="cmath-header">
-  <div class="cmath-logo">ثانوية الغايرة</div>
-</header>
-    <div class="cmath-logo"><span class="c-blue">A</span><span class="c-red">p</span><span class="c-orange">p</span><span class="c-green">r</span><span class="c-blue">e</span><span class="c-orange">n</span><span class="c-green">d</span><span class="c-red">r</span><span class="c-blue">e</span><b> les maths</b><span class="c-green">!</span></div>
-    <div class="cmath-levels"><span>6ème</span><span>5ème</span><span>4ème</span><span>3ème</span><span class="active">2AS</span><span>3AS</span><span>4AS</span><span>5D</span><span>6A</span></div>
-  </header>
+<body>
+<nav class="navbar">
+  <a href="/index.html" class="brand">ثانوية الغايرة</a>
+  <div class="nav-links" id="navLinks"></div>
+</div>
 
 <div class="container">
   <div id="alert-box"></div>
@@ -59,9 +44,8 @@
     </div>
   </div>
 </div>
-</main>
-</div>
 
+<footer class="footer">ثانوية الغايرة &mdash; جميع الحقوق محفوظة.</footer>
 
 <script>
 let profile, exerciseId = null;
@@ -80,50 +64,35 @@ async function init() {
 }
 
 async function loadExercise() {
-  try {
-    const data = await apiGet('/api/exercises/' + exerciseId);
-
-    document.getElementById('exTitle').textContent = data.title;
-    document.getElementById('exQuestion').textContent = data.question;
-    document.getElementById('optA').textContent = data.option_a;
-    document.getElementById('optB').textContent = data.option_b;
-    document.getElementById('optC').textContent = data.option_c;
-    document.getElementById('optD').textContent = data.option_d;
-    if (data.chapter_id) {
-      document.getElementById('cancelLink').href = '/student/exercises.html?chapter_id=' + data.chapter_id;
-    }
-    window.exerciseData = data;
-  } catch (err) {
-    document.getElementById('alert-box').innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(err.message) + '</div>';
+  if (exerciseId) {
+    try {
+      var exData = await apiGet('/api/exercises/' + exerciseId);
+      var exercise = exData.exercise || {};
+      document.getElementById('exTitle').textContent = exercise.title || '';
+      document.getElementById('exQuestion').innerHTML = exercise.question || '';
+      document.getElementById('optA').textContent = exercise.option_a || '';
+      document.getElementById('optB').textContent = exercise.option_b || '';
+      document.getElementById('optC').textContent = exercise.option_c || '';
+      document.getElementById('optD').textContent = exercise.option_d || '';
+    } catch (err) { showAlert(err.message, 'error'); }
   }
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('takeContent').style.display = 'block';
 }
 
-document.getElementById('answerForm').addEventListener('submit', async (e) => {
+document.getElementById('answerForm').addEventListener('submit', function(e) {
   e.preventDefault();
-  const box = document.getElementById('alert-box');
-  const btn = document.getElementById('submitBtn');
-  const answer = document.querySelector('input[name="answer"]:checked').value;
-
-  box.innerHTML = '';
-  btn.disabled = true;
-  btn.textContent = 'جارٍ الحفظ...';
-
-  try {
-    const result = await apiPost('/api/exercises/' + exerciseId + '/submit', { answer: answer });
-
-    box.innerHTML = '<div class="alert alert-success" role="alert">تم حفظ النتيجة! إجابتك ' + (result.correct ? 'صحيحة.' : 'غير صحيحة.') + '</div>';
-    const returnUrl = window.exerciseData?.chapter_id
-      ? '/student/exercises.html?chapter_id=' + window.exerciseData.chapter_id
-      : '/student/exercises.html';
-    setTimeout(() => { window.location.href = returnUrl; }, 1500);
-  } catch (err) {
-    box.innerHTML = '<div class="alert alert-error" role="alert">' + escapeHtml(err.message) + '</div>';
-    btn.disabled = false;
-    btn.textContent = 'إرسال الإجابة';
-  }
+  var form = this;
+  var answer = form.elements['answer'].value;
+  var exId = exerciseId;
+  apiPost('/api/exercises/' + exerciseId + '/submit', { answer: answer }).then(function(data) {
+    showAlert(data.ok ? 'Terminé avec succès !' : data.error || 'Erreur', data.ok ? 'success' : 'error');
+    if (data.ok) {
+      setTimeout(function() { window.location.href = '/student/exercises.html'; }, 1500);
+    }
+  }).catch(function(err) { showAlert(err.message, 'error'); });
 });
-
-init();
 </script>
 </body>
 </html>

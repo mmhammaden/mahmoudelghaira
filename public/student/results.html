@@ -8,35 +8,11 @@
 <script src="../js/api.js"></script>
 <script src="../js/ui.js"></script>
 </head>
-<body class="student-learning-page">
-
-<div class="cmath-shell">
-<aside class="cmath-sidebar">
-  <div class="cmath-ad-space" aria-hidden="true"></div>
-  <div class="cmath-user-box">
-    <div class="cmath-user-name" id="sideStudentName">Élève</div>
-    <div class="cmath-score">Score : <strong id="sideScore">0</strong></div>
-  </div>
-  <nav class="cmath-side-menu" aria-label="Menu élève">
-    <a href="/student/exercises.html">Exercices</a>
-    <a href="/student/results.html" class="active">Bilan</a>
-    <button type="button" onclick="signOut()">Déconnexion</button>
-  </nav>
-  
-</aside>
-
-<main class="cmath-main">
-  <header class="cmath-header">
-  <div class="cmath-logo">ثانوية الغايرة</div>
-</header>
-    <div class="cmath-logo" aria-label="Apprendre les maths">
-      <span class="c-blue">A</span><span class="c-red">p</span><span class="c-orange">p</span><span class="c-green">r</span><span class="c-blue">e</span><span class="c-orange">n</span><span class="c-green">d</span><span class="c-red">r</span><span class="c-blue">e</span>
-      <b> les maths</b><span class="c-green">!</span>
-    </div>
-    <div class="cmath-levels" aria-label="Niveaux">
-      <span>6ème</span><span>5ème</span><span>4ème</span><span>3ème</span><span class="active">2AS</span><span>3AS</span><span>4AS</span><span>5D</span><span>6A</span>
-    </div>
-  </header>
+<body>
+<nav class="navbar">
+  <a href="/index.html" class="brand">ثانوية الغايرة</a>
+  <div class="nav-links" id="navLinks"></div>
+</div>
 
 <div class="container">
   <div id="alert-box"></div>
@@ -53,13 +29,18 @@
     <table id="resultsTable">
       <thead>
         <tr><th>التمرين</th><th>النتيجة</th><th>تاريخ الإرسال</th></tr>
-      </thead>
-      <tbody></tbody>
+      </tbody>
+      <tbody>
+        ${(function() {
+          // This will be populated by JavaScript
+          return '<tr><td colspan="3" style="text-align:center;">لا توجد نتائج بعد</td></tr>'
+        })()}
+      </tbody>
     </table>
   </div>
 </div>
-</main>
-</div>
+
+<footer class="footer">ثانوية الغايرة &mdash; جميع الحقوق محفوظة.</footer>
 
 <script>
 let profile;
@@ -67,9 +48,7 @@ let profile;
 async function init() {
   profile = await requireAuth();
   if (!profile) return;
-  document.getElementById('sideStudentName').textContent = profile.name || 'Élève';
   await buildNavbar(profile);
-
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('resultsContent').style.display = 'block';
   await loadResults();
@@ -77,30 +56,25 @@ async function init() {
 
 async function loadResults() {
   try {
-    const data = await apiGet('/api/results');
-    const results = data.results || [];
-    document.getElementById('sideScore').textContent = (results || []).reduce((sum, item) => sum + Number(item.score || 0), 0);
+    const resData = await apiGet('/api/results');
+    var results = resData.results || [];
+  } catch (err) { showAlert(err.message, 'error'); return; }
 
-    const tbody = document.querySelector('#resultsTable tbody');
-    if ((results || []).length === 0) {
-      showEmpty('resultsTable', 'لا توجد نتائج بعد.', 'ابدأ بأداء التمارين لتظهر نتائجك هنا.');
-      return;
-    }
+  var tableBody = document.querySelector('#resultsTable tbody');
+  tableBody.innerHTML = '';
 
-    // Calculate average
-    const scores = results.map(r => r.score);
-    const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 0;
-
-    tbody.innerHTML = (results || []).map(r => `
-      <tr>
-        <td>${escapeHtml(r.exercise_title) || 'التمرين #' + escapeHtml(r.id)}</td>
-        <td>${escapeHtml(r.score)} / ${escapeHtml(r.total)}</td>
-        <td>${escapeHtml(formatDate(r.submitted_at))}</td>
-      </tr>
-    `).join('');
-  } catch (err) {
-    showAlert(err.message, 'error');
+  if (!results.length) {
+    tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">لا توجد نتائج بعد</td></tr>';
+    return;
   }
+
+  results.forEach(function(r) {
+    var row = document.createElement('tr');
+    row.innerHTML = '<td>' + r.exercise_title + '</td>' +
+                    '<td>' + (r.score ? r.score + '/' + r.total : 'Non Noté') + '</td>' +
+                    '<td>' + r.submitted_at + '</td>';
+    tableBody.appendChild(row);
+  });
 }
 
 init();
